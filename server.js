@@ -487,14 +487,23 @@ app.get('/api/dashboard', async (req, res) => {
 
 // --- Bulgu API'ları ---
 
+// --- Bulgu API'ları ---
+
 app.get('/api/bulgular', (req, res) => {
-    const { vendorId } = req.query;
+    // Tarayıcıdan gelen filtre ve sayfalama parametrelerini al
+    const { vendorId, status, tip, searchTerm, page = 1, limit = 100 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let params = [];
+    let countParams = [];
+
+    // Ana veri sorgusu
     let sql = `
         SELECT
             b.*,
             v.name as vendorName,
-            GROUP_CONCAT(m.name, ', ') as models,
-            GROUP_CONCAT(m.id, ', ') as modelIds,
+            GROUP_CONCAT(DISTINCT m.name) as models,
+            GROUP_CONCAT(DISTINCT m.id) as modelIds,
             av.versionNumber as cozumVersiyon
         FROM Bulgu b
         LEFT JOIN Vendor v ON b.vendorId = v.id
@@ -502,21 +511,65 @@ app.get('/api/bulgular', (req, res) => {
         LEFT JOIN Model m ON bm.modelId = m.id
         LEFT JOIN AppVersion av ON b.cozumVersiyonId = av.id
     `;
-    const params = [];
     
-    if (vendorId) {
-        sql += ` WHERE b.vendorId = ?`;
+    // Toplam kayıt sayısını bulmak için sorgu
+    let countSql = `SELECT COUNT(DISTINCT b.id) as count FROM Bulgu b `;
+
+    // WHERE koşullarını dinamik olarak oluştur
+    let whereClauses = [];
+    if (vendorId && vendorId !== 'all') {
+        whereClauses.push(`b.vendorId = ?`);
         params.push(vendorId);
+        countParams.push(vendorId);
+    }
+    if (status && status !== 'all') {
+        whereClauses.push(`b.status = ?`);
+        params.push(status);
+        countParams.push(status);
+    }
+    if (tip && tip !== 'all') {
+        whereClauses.push(`b.bulguTipi = ?`);
+        params.push(tip);
+        countParams.push(tip);
+    }
+    if (searchTerm) {
+        whereClauses.push(`(b.baslik LIKE ? OR b.detayliAciklama LIKE ?)`);
+        const searchTermLike = `%${searchTerm}%`;
+        params.push(searchTermLike, searchTermLike);
+        countParams.push(searchTermLike, searchTermLike);
+    }
+
+    if (whereClauses.length > 0) {
+        const whereString = ` WHERE ` + whereClauses.join(' AND ');
+        sql += whereString;
+        countSql += whereString;
     }
     
-    sql += `
-        GROUP BY b.id
-        ORDER BY b.id DESC
-    `;
-    
+    // Ana sorguya gruplama, sıralama ve limitleme ekle
+    sql += ` GROUP BY b.id ORDER BY b.id DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    // Her iki sorguyu da çalıştır
     db.all(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({ "error": err.message });
-        res.json(rows);
+        if (err) return res.status(500).json({ "error": `Bulgu verileri alınırken hata: ${err.message}` });
+
+        db.get(countSql, countParams, (countErr, countRow) => {
+            if (countErr) return res.status(500).json({ "error": `Bulgu sayısı alınırken hata: ${countErr.message}` });
+
+            const totalRecords = countRow.count;
+            const totalPages = Math.ceil(totalRecords / limit);
+
+            // Tarayıcıya hem veriyi hem de sayfalama bilgisini gönder
+            res.json({
+                data: rows,
+                pagination: {
+                    currentPage: Number(page),
+                    totalPages: totalPages,
+                    totalRecords: totalRecords,
+                    limit: Number(limit)
+                }
+            });
+        });
     });
 });
 app.post('/api/bulgular', (req, res) => {
