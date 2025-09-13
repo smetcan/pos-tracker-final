@@ -1,6 +1,8 @@
 // Gerekli kütüphaneleri import ediyoruz
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 const path = require('path');
 
 // Express uygulamasını başlatıyoruz
@@ -47,9 +49,33 @@ db.serialize(() => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Session Middleware
+app.use(session({
+    secret: 'kfnncquZlZ4C7wd9Vm6WJ76H3vGwWpJY', // ÖNEMLİ: Bu yazıyı daha sonra karmaşık bir şeyle değiştir
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: false, // Eğer HTTPS kullanmıyorsan false kalmalı
+        httpOnly: true, // Tarayıcıdan cookie'ye direkt erişimi engeller
+        maxAge: 1000 * 60 * 60 * 24 // Cookie'nin ömrü (1 gün)
+    }
+}));
+
 
 
 // --- API ENDPOINTS ---
+
+// --- MEVCUT API'LARI GÜVENLİ HALE GETİRME ---
+
+// '/api/' ile başlayan ve login/logout/session-check olmayan tüm yollara
+// isAuthenticated middleware'ini uygula.
+// Bu kod, tüm diğer API endpoint tanımlarından ÖNCE gelmelidir.
+app.use('/api', (req, res, next) => {
+    if (req.path.startsWith('/login') || req.path.startsWith('/logout') || req.path.startsWith('/session-check')) {
+        return next(); // Bu yolları es geç
+    }
+    isAuthenticated(req, res, next); // Diğer tüm /api yollarını kontrol et
+});
 
 // --- Vendor Detail Page API ---
 app.get('/api/vendors/slug/:slug', async (req, res) => {
@@ -806,6 +832,200 @@ app.use(express.static(path.join(__dirname, 'public'), {
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     },
 }));
+
+// --- KULLANICI YÖNETİMİ API'LARI ---
+
+// Middleware: Bir kullanıcının giriş yapıp yapmadığını kontrol eder
+const isAuthenticated = (req, res, next) => {
+    if (req.session.user) {
+        next(); // Kullanıcı giriş yapmış, devam et
+    } else {
+        res.status(401).json({ error: 'Bu işlem için yetkiniz yok. Lütfen giriş yapın.' });
+    }
+};
+
+// --- Oturum Yönetimi Endpoint'leri ---
+
+// POST /api/login -> Kullanıcı Girişi
+app.post('/api/login', (req, res) => {
+    const { userName, password } = req.body;
+    if (!userName || !password) {
+        return res.status(400).json({ error: 'Kullanıcı adı ve şifre zorunludur.' });
+    }
+
+    const sql = 'SELECT * FROM users WHERE userName = ?';
+    db.get(sql, [userName], async (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Veritabanı hatası.' });
+        }
+        if (!user) {
+            return res.status(401).json({ error: 'Geçersiz kullanıcı adı veya şifre.' });
+        }
+
+        const match = await bcrypt.compare(password, user.password);
+        if (match) {
+            // Şifre doğru, oturumu başlat
+            req.session.user = {
+                id: user.id,
+                userName: user.userName,
+                name: user.name,
+                surname: user.surname
+            };
+            res.status(200).json({ message: 'Giriş başarılı.', user: req.session.user });
+        } else {
+            res.status(401).json({ error: 'Geçersiz kullanıcı adı veya şifre.' });
+        }
+    });
+});
+
+// POST /api/logout -> Kullanıcı Çıkışı
+app.post('/api/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).json({ error: 'Çıkış yapılamadı.' });
+        }
+        res.clearCookie('connect.sid'); // Oturum cookie'sini temizle
+        res.status(200).json({ message: 'Başarıyla çıkış yapıldı.' });
+    });
+});
+
+// GET /api/session-check -> Oturum Kontrolü
+app.get('/api/session-check', (req, res) => {
+    if (req.session.user) {
+        res.status(200).json({ loggedIn: true, user: req.session.user });
+    } else {
+        res.status(200).json({ loggedIn: false });
+    }
+});
+
+
+// --- Kullanıcı Yönetimi Endpoint'leri (Güvenli) ---
+
+// GET /api/users -> Tüm kullanıcıları listeler
+app.get('/api/users', isAuthenticated, (req, res) => {
+    // Şifre hariç tüm bilgileri seç
+    const sql = 'SELECT id, userName, name, surname, email FROM users ORDER BY name';
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: 'Kullanıcılar listelenirken bir hata oluştu.' });
+        }
+        res.status(200).json(rows);
+    });
+});
+
+// POST /api/users -> Yeni kullanıcı ekler
+app.post('/api/users', isAuthenticated, async (req, res) => {
+    const { userName, name, surname, email, password } = req.body;
+    if (!userName || !name || !surname || !password) {
+        return res.status(400).json({ error: 'Kullanıcı adı, isim, soyisim ve şifre zorunludur.' });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const sql = 'INSERT INTO users (userName, name, surname, email, password) VALUES (?, ?, ?, ?, ?)';
+        db.run(sql, [userName, name, surname, email, hashedPassword], function (err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                   return res.status(409).json({ error: 'Bu kullanıcı adı veya e-posta zaten kullanımda.' });
+                }
+                return res.status(500).json({ error: 'Kullanıcı oluşturulurken bir veritabanı hatası oluştu.' });
+            }
+            res.status(201).json({ id: this.lastID, message: 'Kullanıcı başarıyla oluşturuldu.' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Şifre hashlenirken bir hata oluştu.' });
+    }
+});
+
+// PUT /api/users/:id/password -> Bir kullanıcının şifresini sıfırlar
+app.put('/api/users/:id/password', isAuthenticated, async (req, res) => {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: 'Yeni şifre en az 6 karakter olmalıdır.' });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const sql = 'UPDATE users SET password = ? WHERE id = ?';
+        db.run(sql, [hashedPassword, id], function (err) {
+            if (err) {
+                return res.status(500).json({ error: 'Şifre güncellenirken bir veritabanı hatası oluştu.' });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+            }
+            res.status(200).json({ message: 'Kullanıcının şifresi başarıyla güncellendi.' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Şifre hashlenirken bir hata oluştu.' });
+    }
+});
+
+// DELETE /api/users/:id -> Bir kullanıcıyı siler
+app.delete('/api/users/:id', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+    
+    // Yöneticinin kendini silmesini engelle (opsiyonel ama önerilir)
+    if (req.session.user.id == id) {
+        return res.status(403).json({ error: 'Kendi hesabınızı silemezsiniz.' });
+    }
+    
+    const sql = 'DELETE FROM users WHERE id = ?';
+    db.run(sql, [id], function(err) {
+        if (err) {
+            return res.status(500).json({ error: 'Kullanıcı silinirken bir hata oluştu.' });
+        }
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Silinecek kullanıcı bulunamadı.' });
+        }
+        res.status(200).json({ message: 'Kullanıcı başarıyla silindi.' });
+    });
+});
+
+// POST /api/user/change-password -> Giriş yapmış kullanıcının kendi şifresini değiştirmesi
+app.post('/api/user/change-password', isAuthenticated, (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.session.user.id;
+
+    if (!oldPassword || !newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: 'Mevcut ve yeni şifre (en az 6 karakter) zorunludur.' });
+    }
+
+    const sqlSelect = 'SELECT password FROM users WHERE id = ?';
+    db.get(sqlSelect, [userId], async (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Veritabanı hatası.' });
+        }
+        if (!user) {
+            // Bu normalde olmamalı çünkü kullanıcı giriş yapmış durumda
+            return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        }
+
+        // Girilen mevcut şifrenin doğruluğunu kontrol et
+        const match = await bcrypt.compare(oldPassword, user.password);
+        if (!match) {
+            return res.status(401).json({ error: 'Mevcut şifreniz yanlış.' });
+        }
+
+        // Mevcut şifre doğruysa, yeni şifreyi hash'le ve güncelle
+        try {
+            const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+            const sqlUpdate = 'UPDATE users SET password = ? WHERE id = ?';
+            db.run(sqlUpdate, [hashedNewPassword, userId], function(updateErr) {
+                if (updateErr) {
+                    return res.status(500).json({ error: 'Şifre güncellenirken bir hata oluştu.' });
+                }
+                res.status(200).json({ message: 'Şifreniz başarıyla güncellendi.' });
+            });
+        } catch (hashError) {
+            res.status(500).json({ error: 'Yeni şifre oluşturulurken bir hata oluştu.' });
+        }
+    });
+});
+
+
+
 
 // --- Sunucuyu Başlatma ---
 app.listen(PORT, () => {

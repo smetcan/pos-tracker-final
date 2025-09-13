@@ -1,4 +1,32 @@
 // Sayfa tamamen yüklendiğinde bu fonksiyon çalışır
+// --- SESSION CHECK ---
+// Bu kod, ana uygulama script'i yüklenmeden önce çalışır.
+// Kullanıcının giriş yapıp yapmadığını kontrol eder.
+// --- SESSION CHECK ---
+(async () => {
+    try {
+        const response = await fetch('/api/session-check');
+        const data = await response.json();
+        if (!data.loggedIn) {
+            if (window.location.pathname.indexOf('login.html') === -1) {
+                window.location.href = '/login.html';
+            }
+        } else {
+            // YENİ: Giriş yapan kullanıcının adını ekrana yaz
+            const userNameSpan = document.getElementById('current-user-name');
+            if(userNameSpan) {
+                userNameSpan.textContent = data.user.userName;
+            }
+        }
+    } catch (error) {
+        console.error('Oturum kontrolü sırasında hata:', error);
+        if (window.location.pathname.indexOf('login.html') === -1) {
+            window.location.href = '/login.html';
+        }
+    }
+})();
+// -------------------
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENT SEÇİMLERİ ---
     const mainContent = document.getElementById('main-content');
@@ -15,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let vendorsData = [];
     let modelsData = [];
     let versionsData = [];
+    let usersData = [];
     let bulgularData = [];
     let vendorSort = { key: 'id', direction: 'asc' };
     let modelSort = { key: 'vendorName', direction: 'asc' };
@@ -119,13 +148,12 @@ async function router() {
                 return;
             }
             document.querySelector(`.sidebar-link[data-vendor-id="${vendorId}"]`)?.classList.add('active');
-            // Vendor sayfasında sayfalama şimdilik yok, tümünü getiriyoruz
             const [stats, bulgularResponse] = await Promise.all([
                 apiRequest(`/api/vendors/${vendorId}/stats`),
-                apiRequest(`/api/bulgular?vendorId=${vendorId}&limit=1000`) 
+                apiRequest(`/api/bulgular?vendorId=${vendorId}&limit=1000`)
             ]);
             mainContent.innerHTML = getVendorDetailPageHTML(vendor, stats, bulgularResponse.data);
-            attachBulguTableActionListeners(bulgularResponse.data); // Sadece tablo aksiyonları
+            attachBulguTableActionListeners(bulgularResponse.data);
         } else if (hash === '#/bulgular') {
             navLinks.bulgular.classList.add('active');
             const [vendors, models, versions] = await Promise.all([
@@ -139,17 +167,19 @@ async function router() {
             await fetchAndRenderBulgular({ page: 1 });
         } else if (hash === '#/yonetim') {
             navLinks.yonetim.classList.add('active');
-            const [vendors, models, versions] = await Promise.all([
+            const [vendors, models, versions, users] = await Promise.all([
                 apiRequest('/api/vendors'),
                 apiRequest('/api/models'),
-                apiRequest('/api/versions')
+                apiRequest('/api/versions'),
+                apiRequest('/api/users')
             ]);
             vendorsData = vendors;
             modelsData = models;
             versionsData = versions;
-            mainContent.innerHTML = getYonetimHTML(vendors, models, versions, currentActiveTab);
+            usersData = users; // DÜZELTME: Kullanıcı verisini global değişkene kaydet
+            mainContent.innerHTML = getYonetimHTML(vendors, models, versions, users, currentActiveTab);
             attachYonetimEventListeners();
-        } else { // Varsayılan olarak ana sayfayı göster
+        } else {
             navLinks.dashboard.classList.add('active');
             const stats = await apiRequest('/api/dashboard');
             mainContent.innerHTML = getDashboardHTML(stats);
@@ -372,94 +402,120 @@ function getBulgularPageHTML(bulgular, pagination = {}) {
         `;
     }
 
-    function getYonetimHTML(vendors, models, versions, activeTab) {
-        const getSortIcon = (sortState, key) => (sortState.key !== key) ? '<span>&nbsp;</span>' : (sortState.direction === 'asc' ? '▲' : '▼');
-        const boolToText = (value) => value ? 'Evet' : 'Hayır';
-        const vendorsTableRows = vendors.map(vendor => `
-            <tr class="border-b"><td class="p-3 font-medium">${vendor.name}</td><td class="p-3">${vendor.makeCode}</td><td class="p-3 text-right">
-                <button class="open-contacts-btn px-2 py-1 mr-2 bg-gray-100 rounded text-sm text-gray-700" data-vendor-id="${vendor.id}">İletişim</button>
-                <button class="edit-vendor-btn p-1 text-sm text-blue-600" data-vendor-id="${vendor.id}">Düzenle</button>
-                <button class="delete-vendor-btn p-1 text-sm text-red-600" data-vendor-id="${vendor.id}" data-vendor-name="${vendor.name}">Sil</button>
-            </td></tr>`).join('');
-        const modelsTableRows = models.map(model => `
-            <tr class="border-b">
-                <td class="p-3 font-medium">${model.name}</td><td class="p-3">${model.code || ''}</td>
-                <td class="p-3">${model.vendorName}</td>
-                <td class="p-3 text-center">${boolToText(model.isTechpos)}</td>
-                <td class="p-3 text-center">${boolToText(model.isAndroidPos)}</td>
-                <td class="p-3 text-center">${boolToText(model.isOkcPos)}</td>
-                <td class="p-3 text-right">
-                    <button class="edit-model-btn p-1 text-sm text-blue-600" data-model-id="${model.id}">Düzenle</button>
-                    <button class="delete-model-btn p-1 text-sm text-red-600" data-model-id="${model.id}" data-model-name="${model.name}">Sil</button>
-                </td>
-            </tr>`).join('');
-        const versionsTableRows = versions.map(version => {
-            const statusClass = version.status === 'Prod' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
-            return `
-             <tr class="border-b"><td class="p-3 font-medium"><a href="#" class="view-version-link text-blue-600" data-version-id="${version.id}">${version.versionNumber}</a></td><td class="p-3">${version.vendorName}</td><td class="p-3">${version.deliveryDate}</td><td class="p-3 text-xs text-gray-600">${version.models || ''}</td>
-                <td class="p-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${version.status}</span></td><td class="p-3">${version.prodOnayDate || '-'}</td>
-                <td class="p-3 text-right">
-                    <button class="edit-version-btn p-1 text-sm text-blue-600" data-version-id="${version.id}">Düzenle</button>
-                    <button class="delete-version-btn p-1 text-sm text-red-600" data-version-id="${version.id}" data-version-number="${version.versionNumber}">Sil</button>
-                </td></tr>`;
-        }).join('');
-        const modelFilterBarHTML = `
-            <div class="flex flex-wrap items-center gap-2 mb-4 p-4 border rounded-md bg-gray-50">
-                <input id="model-search-input" type="text" placeholder="Model adı/kodu ara..." class="flex-grow px-3 py-2 text-sm border border-gray-300 rounded-md" style="min-width: 200px;">
-                <select id="model-vendor-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="all">Tüm Vendorlar</option>
-                    ${vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('')}
-                </select>
-                <select id="model-techpos-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="all">TechPOS (Tümü)</option><option value="1">Evet</option><option value="0">Hayır</option>
-                </select>
-                <select id="model-android-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="all">Android (Tümü)</option><option value="1">Evet</option><option value="0">Hayır</option>
-                </select>
-                <select id="model-okc-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="all">ÖKC (Tümü)</option><option value="1">Evet</option><option value="0">Hayır</option>
-                </select>
-                <button id="clear-model-filters-btn" class="px-3 py-2 text-sm border bg-gray-200 hover:bg-gray-300 rounded-md">Temizle</button>
-            </div>
-        `;
+    function getYonetimHTML(vendors, models, versions, users, activeTab) { // "users" parametresi eklendi
+    const getSortIcon = (sortState, key) => (sortState.key !== key) ? '<span>&nbsp;</span>' : (sortState.direction === 'asc' ? '▲' : '▼');
+    const boolToText = (value) => value ? 'Evet' : 'Hayır';
+    
+    const vendorsTableRows = vendors.map(vendor => `
+        <tr class="border-b"><td class="p-3 font-medium">${vendor.name}</td><td class="p-3">${vendor.makeCode}</td><td class="p-3 text-right">
+            <button class="open-contacts-btn px-2 py-1 mr-2 bg-gray-100 rounded text-sm text-gray-700" data-vendor-id="${vendor.id}">İletişim</button>
+            <button class="edit-vendor-btn p-1 text-sm text-blue-600" data-vendor-id="${vendor.id}">Düzenle</button>
+            <button class="delete-vendor-btn p-1 text-sm text-red-600" data-vendor-id="${vendor.id}" data-vendor-name="${vendor.name}">Sil</button>
+        </td></tr>`).join('');
+        
+    const modelsTableRows = models.map(model => `
+        <tr class="border-b">
+            <td class="p-3 font-medium">${model.name}</td><td class="p-3">${model.code || ''}</td>
+            <td class="p-3">${model.vendorName}</td>
+            <td class="p-3 text-center">${boolToText(model.isTechpos)}</td>
+            <td class="p-3 text-center">${boolToText(model.isAndroidPos)}</td>
+            <td class="p-3 text-center">${boolToText(model.isOkcPos)}</td>
+            <td class="p-3 text-right">
+                <button class="edit-model-btn p-1 text-sm text-blue-600" data-model-id="${model.id}">Düzenle</button>
+                <button class="delete-model-btn p-1 text-sm text-red-600" data-model-id="${model.id}" data-model-name="${model.name}">Sil</button>
+            </td>
+        </tr>`).join('');
+        
+    const versionsTableRows = versions.map(version => {
+        const statusClass = version.status === 'Prod' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
         return `
-            <h1 class="text-3xl font-bold mb-6">Yönetim Paneli</h1>
-            <div class="bg-white rounded-lg shadow">
-                <div class="border-b"><nav class="-mb-px flex space-x-6 px-6">
-                    <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'vendors' ? 'active' : ''}" data-tab="vendors">Vendorlar</button>
-                    <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'models' ? 'active' : ''}" data-tab="models">Modeller</button>
-                    <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'versions' ? 'active' : ''}" data-tab="versions">Versiyonlar</button>
-                </nav></div>
-                <div class="p-6">
-                    <div id="vendors-tab" class="tab-content ${activeTab === 'vendors' ? 'active' : ''}">
-                        <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Vendor Tanımları</h2><button id="add-vendor-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Vendor Ekle</button></div>
-                        <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
-                            <th class="p-3 text-left sortable-header" data-table="vendors" data-sort-key="name">Vendor Adı ${getSortIcon(vendorSort, 'name')}</th>
-                            <th class="p-3 text-left sortable-header" data-table="vendors" data-sort-key="makeCode">Vendor Kodu ${getSortIcon(vendorSort, 'makeCode')}</th>
-                            <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${vendorsTableRows}</tbody></table></div>
-                    </div>
-                    <div id="models-tab" class="tab-content ${activeTab === 'models' ? 'active' : ''}">
-                         <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Model Tanımları</h2><button id="add-model-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Model Ekle</button></div>
-                         ${modelFilterBarHTML}
-                        <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
-                            <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="name">Model Adı ${getSortIcon(modelSort, 'name')}</th>
-                            <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="code">Model Kodu ${getSortIcon(modelSort, 'code')}</th>
-                            <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="vendorName">Vendor ${getSortIcon(modelSort, 'vendorName')}</th>
-                            <th class="p-3 text-center">TechPOS</th>
-                            <th class="p-3 text-center">Android</th>
-                            <th class="p-3 text-center">ÖKC</th>
-                            <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${modelsTableRows}</tbody></table></div>
-                    </div>
-                    <div id="versions-tab" class="tab-content ${activeTab === 'versions' ? 'active' : ''}">
-                        <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Versiyon Tanımları</h2><button id="add-version-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Versiyon Ekle</button></div>
-                        <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
-                            <th class="p-3 text-left">Versiyon No</th><th class="p-3 text-left">Vendor</th><th class="p-3 text-left">Teslim Tarihi</th><th class="p-3 text-left">Geçerli Modeller</th>
-                            <th class="p-3 text-left">Durum</th><th class="p-3 text-left">Prod Onay Tarihi</th>
-                            <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${versionsTableRows}</tbody></table></div>
-                    </div>
+         <tr class="border-b"><td class="p-3 font-medium"><a href="#" class="view-version-link text-blue-600" data-version-id="${version.id}">${version.versionNumber}</a></td><td class="p-3">${version.vendorName}</td><td class="p-3">${version.deliveryDate}</td><td class="p-3 text-xs text-gray-600">${version.models || ''}</td>
+            <td class="p-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${version.status}</span></td><td class="p-3">${version.prodOnayDate || '-'}</td>
+            <td class="p-3 text-right">
+                <button class="edit-version-btn p-1 text-sm text-blue-600" data-version-id="${version.id}">Düzenle</button>
+                <button class="delete-version-btn p-1 text-sm text-red-600" data-version-id="${version.id}" data-version-number="${version.versionNumber}">Sil</button>
+            </td></tr>`;
+    }).join('');
+
+    const usersTableRows = users.map(user => `
+        <tr class="border-b">
+            <td class="p-3 font-medium">${user.userName}</td>
+            <td class="p-3">${user.name} ${user.surname}</td>
+            <td class="p-3">${user.email || ''}</td>
+            <td class="p-3 text-right">
+                <button class="reset-password-btn p-1 text-sm text-blue-600" data-user-id="${user.id}" data-user-name="${user.userName}">Şifre Sıfırla</button>
+                <button class="delete-user-btn p-1 text-sm text-red-600" data-user-id="${user.id}" data-user-name="${user.userName}">Sil</button>
+            </td>
+        </tr>
+    `).join('');
+
+    const modelFilterBarHTML = `
+        <div class="flex flex-wrap items-center gap-2 mb-4 p-4 border rounded-md bg-gray-50">
+            <input id="model-search-input" type="text" placeholder="Model adı/kodu ara..." class="flex-grow px-3 py-2 text-sm border border-gray-300 rounded-md" style="min-width: 200px;">
+            <select id="model-vendor-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
+                <option value="all">Tüm Vendorlar</option>
+                ${vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('')}
+            </select>
+            <select id="model-techpos-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
+                <option value="all">TechPOS (Tümü)</option><option value="1">Evet</option><option value="0">Hayır</option>
+            </select>
+            <select id="model-android-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
+                <option value="all">Android (Tümü)</option><option value="1">Evet</option><option value="0">Hayır</option>
+            </select>
+            <select id="model-okc-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md">
+                <option value="all">ÖKC (Tümü)</option><option value="1">Evet</option><option value="0">Hayır</option>
+            </select>
+            <button id="clear-model-filters-btn" class="px-3 py-2 text-sm border bg-gray-200 hover:bg-gray-300 rounded-md">Temizle</button>
+        </div>
+    `;
+
+    return `
+        <h1 class="text-3xl font-bold mb-6">Yönetim Paneli</h1>
+        <div class="bg-white rounded-lg shadow">
+            <div class="border-b"><nav class="-mb-px flex space-x-6 px-6">
+                <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'vendors' ? 'active' : ''}" data-tab="vendors">Vendorlar</button>
+                <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'models' ? 'active' : ''}" data-tab="models">Modeller</button>
+                <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'versions' ? 'active' : ''}" data-tab="versions">Versiyonlar</button>
+                <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users' ? 'active' : ''}" data-tab="users">Kullanıcılar</button>
+            </nav></div>
+            <div class="p-6">
+                <div id="vendors-tab" class="tab-content ${activeTab === 'vendors' ? 'active' : ''}">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Vendor Tanımları</h2><button id="add-vendor-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Vendor Ekle</button></div>
+                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                        <th class="p-3 text-left sortable-header" data-table="vendors" data-sort-key="name">Vendor Adı ${getSortIcon(vendorSort, 'name')}</th>
+                        <th class="p-3 text-left sortable-header" data-table="vendors" data-sort-key="makeCode">Vendor Kodu ${getSortIcon(vendorSort, 'makeCode')}</th>
+                        <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${vendorsTableRows}</tbody></table></div>
                 </div>
-            </div>`;
-    }
+                <div id="models-tab" class="tab-content ${activeTab === 'models' ? 'active' : ''}">
+                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Model Tanımları</h2><button id="add-model-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Model Ekle</button></div>
+                     ${modelFilterBarHTML}
+                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                        <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="name">Model Adı ${getSortIcon(modelSort, 'name')}</th>
+                        <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="code">Model Kodu ${getSortIcon(modelSort, 'code')}</th>
+                        <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="vendorName">Vendor ${getSortIcon(modelSort, 'vendorName')}</th>
+                        <th class="p-3 text-center">TechPOS</th>
+                        <th class="p-3 text-center">Android</th>
+                        <th class="p-3 text-center">ÖKC</th>
+                        <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${modelsTableRows}</tbody></table></div>
+                </div>
+                <div id="versions-tab" class="tab-content ${activeTab === 'versions' ? 'active' : ''}">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Versiyon Tanımları</h2><button id="add-version-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Versiyon Ekle</button></div>
+                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                        <th class="p-3 text-left">Versiyon No</th><th class="p-3 text-left">Vendor</th><th class="p-3 text-left">Teslim Tarihi</th><th class="p-3 text-left">Geçerli Modeller</th>
+                        <th class="p-3 text-left">Durum</th><th class="p-3 text-left">Prod Onay Tarihi</th>
+                        <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${versionsTableRows}</tbody></table></div>
+                </div>
+                <div id="users-tab" class="tab-content ${activeTab === 'users' ? 'active' : ''}">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Kullanıcı Yönetimi</h2><button id="add-user-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Kullanıcı Ekle</button></div>
+                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                        <th class="p-3 text-left">Kullanıcı Adı</th>
+                        <th class="p-3 text-left">İsim Soyisim</th>
+                        <th class="p-3 text-left">E-posta</th>
+                        <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${usersTableRows}</tbody></table></div>
+                </div>
+            </div>
+        </div>`;
+}
     
     function getVendorModalHTML(vendor = {}, contacts = []) {
     const isEdit = vendor.id !== undefined;
@@ -517,6 +573,110 @@ function getBulgularPageHTML(bulgular, pagination = {}) {
                 <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
                     <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
                     <button type="submit" form="vendor-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getUserModalHTML(user = {}) {
+    const isEdit = user.id !== undefined; // Bu şu an için kullanılmıyor ama gelecek için iyi.
+    const title = 'Yeni Kullanıcı Ekle';
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto">
+                    <form id="user-form" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-x-6">
+                            <div>
+                                <label for="user-name" class="block text-sm font-medium">İsim</label>
+                                <input type="text" id="user-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="user-surname" class="block text-sm font-medium">Soyisim</label>
+                                <input type="text" id="user-surname" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="user-userName" class="block text-sm font-medium">Kullanıcı Adı</label>
+                                <input type="text" id="user-userName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="user-email" class="block text-sm font-medium">E-posta</label>
+                                <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="user-password" class="block text-sm font-medium">Şifre</label>
+                                <input type="password" id="user-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="user-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Kullanıcı Oluştur</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getResetPasswordModalHTML(userName) {
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Şifre Sıfırla</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="reset-password-form" class="space-y-4">
+                        <p class="text-sm text-center"><strong>${userName}</strong> kullanıcısı için yeni bir şifre belirleyin.</p>
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium">Yeni Şifre</label>
+                            <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="reset-password-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Şifreyi Güncelle</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getChangePasswordModalHTML() {
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Şifre Değiştir</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="change-password-form" class="space-y-4">
+                        <div>
+                            <label for="old-password" class="block text-sm font-medium">Mevcut Şifre</label>
+                            <input type="password" id="old-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium">Yeni Şifre</label>
+                            <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="change-password-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Şifreyi Güncelle</button>
                 </div>
             </div>
         </div>`;
@@ -978,7 +1138,7 @@ function renderBulgularPage(bulgular, pagination, options = {}) {
 function renderYonetimPage(options = {}) {
     let filteredModels = [...modelsData];
 
-    // Filtreleri uygula
+    // Model Filtrelerini uygula
     if (modelFilters.searchTerm) {
         const term = modelFilters.searchTerm.toLowerCase();
         filteredModels = filteredModels.filter(m => m.name.toLowerCase().includes(term) || m.code?.toLowerCase().includes(term));
@@ -996,13 +1156,11 @@ function renderYonetimPage(options = {}) {
         filteredModels = filteredModels.filter(m => String(m.isOkcPos) === String(modelFilters.isOkcPos));
     }
 
-    // Sıralamayı uygula
     const sortedModels = sortData(filteredModels, modelSort);
 
-    // Tüm yönetim sayfasını filtrelenmiş verilerle yeniden çiz
-    mainContent.innerHTML = getYonetimHTML(vendorsData, sortedModels, versionsData, currentActiveTab);
+    // DÜZELTME: HTML'i çizerken global usersData değişkenini kullan
+    mainContent.innerHTML = getYonetimHTML(vendorsData, sortedModels, versionsData, usersData, currentActiveTab);
     
-    // Olay dinleyicilerini yeniden bağla
     attachYonetimEventListeners();
 
     // Filtre elemanlarının değerlerini koru
@@ -1012,8 +1170,6 @@ function renderYonetimPage(options = {}) {
     document.getElementById('model-android-filter').value = modelFilters.isAndroidPos;
     document.getElementById('model-okc-filter').value = modelFilters.isOkcPos;
 
-    // --- YENİ EKLENEN KOD ---
-    // Odağı ve imleç pozisyonunu geri yükle
     if (options.focusOn) {
         const elementToFocus = document.getElementById(options.focusOn);
         if (elementToFocus) {
@@ -1770,6 +1926,74 @@ function attachYonetimEventListeners() {
             });
         });
     });
+    document.getElementById('add-user-btn')?.addEventListener('click', () => {
+        modalContainer.innerHTML = getUserModalHTML();
+        
+        document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+
+        document.getElementById('user-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('user-name').value,
+                surname: document.getElementById('user-surname').value,
+                userName: document.getElementById('user-userName').value,
+                email: document.getElementById('user-email').value,
+                password: document.getElementById('user-password').value,
+            };
+            try {
+                await apiRequest('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                modalContainer.innerHTML = '';
+                router(); // Yönetim sayfasını yenile
+            } catch (error) {
+                showErrorModal(error.message);
+            }
+        });
+    });
+
+    document.querySelectorAll('.reset-password-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const userId = e.currentTarget.dataset.userId;
+            const userName = e.currentTarget.dataset.userName;
+            modalContainer.innerHTML = getResetPasswordModalHTML(userName);
+
+            document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+
+            document.getElementById('reset-password-form')?.addEventListener('submit', async (formEvent) => {
+                formEvent.preventDefault();
+                const newPassword = document.getElementById('new-password').value;
+                try {
+                    await apiRequest(`/api/users/${userId}/password`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ newPassword })
+                    });
+                    modalContainer.innerHTML = '';
+                    // Başarı mesajı eklenebilir
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+    
+    document.querySelectorAll('.delete-user-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const userId = e.currentTarget.dataset.userId;
+            const userName = e.currentTarget.dataset.userName;
+            modalContainer.innerHTML = getDeleteConfirmModalHTML(`'${userName}' kullanıcısı silinsin mi?`);
+            
+            document.getElementById('cancel-delete').addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('confirm-delete').addEventListener('click', async () => {
+                try {
+                    await apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
+                    modalContainer.innerHTML = '';
+                    router(); // Yönetim sayfasını yenile
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
 }
 
 function attachBulgularEventListeners(bulgular) {
@@ -1824,6 +2048,88 @@ function attachBulgularEventListeners(bulgular) {
     if (tipFilter) tipFilter.value = bulguFilters.tip;
 }
 
+function attachAppEventListeners() {
+    // Çıkış Yap Butonu
+    document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await apiRequest('/api/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        } catch (error) {
+            showErrorModal('Çıkış yapılırken bir hata oluştu.');
+        }
+    });
+
+    // Şifre Değiştir Butonu
+    document.getElementById('change-password-btn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        modalContainer.innerHTML = getChangePasswordModalHTML();
+
+        document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+
+        document.getElementById('change-password-form')?.addEventListener('submit', async (formEvent) => {
+            formEvent.preventDefault();
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            try {
+                await apiRequest('/api/user/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+                modalContainer.innerHTML = '';
+                // Başarı mesajı eklenebilir.
+            } catch (error) {
+                showErrorModal(error.message);
+            }
+        });
+    });
+}
+
+function attachSidebarToggleListeners() {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    const iconOpen = document.getElementById('toggle-icon-open');
+    const iconClose = document.getElementById('toggle-icon-close');
+
+    // Eğer gerekli elementler bulunamazsa, hatayı önlemek için fonksiyonu durdur.
+    if (!sidebar || !toggleBtn || !iconOpen || !iconClose) {
+        console.error('Sidebar toggle elementleri bulunamadı.');
+        return; 
+    }
+
+    const setSidebarState = (collapsed) => {
+        localStorage.setItem('sidebarCollapsed', collapsed);
+        if (collapsed) {
+            sidebar.classList.add('-translate-x-full'); // Kenar çubuğunu sola kaydır
+            toggleBtn.classList.add('translate-x-4'); // Butonu sağa kaydır
+            toggleBtn.classList.remove('translate-x-64');
+            iconOpen.classList.remove('hidden');
+            iconClose.classList.add('hidden');
+        } else {
+            sidebar.classList.remove('-translate-x-full'); // Kenar çubuğunu görünür yap
+            toggleBtn.classList.add('translate-x-64'); // Butonu kenar çubuğunun sağına kaydır
+            toggleBtn.classList.remove('translate-x-4');
+            iconOpen.classList.add('hidden');
+            iconClose.classList.remove('hidden');
+        }
+    };
+
+    toggleBtn.addEventListener('click', () => {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        setSidebarState(!isCollapsed);
+    });
+
+    // Sayfa ilk yüklendiğinde, kaydedilmiş durumu animasyonsuz uygula
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar.classList.add('duration-0'); // Animasyonu geçici olarak kapat
+        setSidebarState(true);
+        setTimeout(() => sidebar.classList.remove('duration-0'), 50); // Animasyonu geri aç
+    } else {
+        setSidebarState(false);
+    }
+}
+
     // --- BAŞLANGIÇ ---
     // Ana navigasyon linkleri URL hash'ini günceller
     navLinks.dashboard.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#/dashboard'; });
@@ -1836,4 +2142,6 @@ function attachBulgularEventListeners(bulgular) {
     // Başlangıçta gerekli verileri ve sayfayı yükle
     loadSidebarVendors();
     router();
+    attachAppEventListeners();
+    attachSidebarToggleListeners();
 });
