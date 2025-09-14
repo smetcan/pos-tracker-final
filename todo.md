@@ -15,40 +15,13 @@ Bu bölüm, uygulamadaki tüm modal pencereleri standart ve modern bir tasarıma
 - [x] **Kişi Ekle/Düzenle** (`getContactSubModalHTML`)
 - [x] **Model Ekle/Düzenle** (`getModelModalHTML`)
 - [x] **Versiyon Ekle/Düzenle** (`getVersionModalHTML`)
+- [x] **Bulgu Görüntüleme Penceresi**
+- [x] **Versiyon Görüntüleme Penceresi**
+- [x] **İletişim Kişileri Penceresi**
+- [x] **İçeri Aktarma Penceresi**
+- [x] **Silme Onayı Penceresi**
+- [x] **Hata Mesajı Penceresi**
 
-### Yapılacaklar Listesi (To-Do)
-
-#### Görüntüleme Pencereleri
-Bu pencereler, kullanıcıya sadece bilgi göstermek amacıyla kullanılır. Yeni standart tasarıma (Başlık, İçerik, Alt Bilgi yapısı) güncellenmeleri gerekiyor.
-
-- [ ] **Bulgu Görüntüleme Penceresi**
-  - **Görev:** `getBulguViewModalHTML` fonksiyonunu yeni standart tasarıma uygun olarak güncelle.
-  - **Dosya:** `script.js`
-
-- [ ] **Versiyon Görüntüleme Penceresi**
-  - **Görev:** `getVersionViewModalHTML` fonksiyonunu yeni standart tasarıma uygun olarak güncelle.
-  - **Dosya:** `script.js`
-
-- [ ] **İletişim Kişileri Penceresi**
-  - **Görev:** `getVendorContactsModalHTML` fonksiyonunu yeni standart tasarıma uygun olarak güncelle. Bu pencere, vendor listesindeki "İletişim" butonuna basınca açılan salt okunur penceredir.
-  - **Dosya:** `script.js`
-
-#### Yardımcı Pencereler
-Bu pencereler, belirli bir amaca hizmet eden daha küçük ve basit pencerelerdir.
-
-- [ ] **İçeri Aktarma Penceresi**
-  - **Görev:** `getBulguImportModalHTML` fonksiyonunu yeni standart tasarıma uygun olarak güncelle.
-  - **Dosya:** `script.js`
-
-- [ ] **Silme Onayı Penceresi**
-  - **Görev:** `getDeleteConfirmModalHTML` fonksiyonunu daha modern ve standart tasarıma uygun bir görünüme kavuştur.
-  - **Dosya:** `script.js`
-
-- [ ] **Hata Mesajı Penceresi**
-  - **Görev:** `showErrorModal` fonksiyonunu daha modern ve standart tasarıma uygun bir görünüme kavuştur.
-  - **Dosya:** `script.js`
-
----
 
 ## Bölüm 2: Kullanıcı Yönetimi (Authentication) Görevleri
 
@@ -56,13 +29,13 @@ Bu bölüm, uygulamaya e-posta gerektirmeyen, kontrollü bir kullanıcı doğrul
 
 ### Aşama 1: Backend (`server.js`) Hazırlıkları
 
-- [ ] **Görev 1.1: Gerekli Kütüphaneleri Yükleme**
+- [x] **Görev 1.1: Gerekli Kütüphaneleri Yükleme**
   - Projenin ana dizininde bir terminal aç ve aşağıdaki komutları çalıştır:
     ```powershell
     npm install express-session bcrypt
     ```
 
-- [ ] **Görev 1.2: `users` Tablosunu Oluşturma**
+- [x] **Görev 1.2: `users` Tablosunu Oluşturma**
   - `dev.db` veritabanında aşağıdaki SQL komutunu çalıştırarak `users` tablosunu oluştur:
     ```sql
     CREATE TABLE users (
@@ -75,14 +48,14 @@ Bu bölüm, uygulamaya e-posta gerektirmeyen, kontrollü bir kullanıcı doğrul
     );
     ```
 
-- [ ] **Görev 1.3: `server.js` Dosyasına Kütüphaneleri Ekleme**
+- [x] **Görev 1.3: `server.js` Dosyasına Kütüphaneleri Ekleme**
   - Dosyanın en başına aşağıdaki `require` ifadelerini ekle:
     ```javascript
     const session = require('express-session');
     const bcrypt = require('bcrypt');
     ```
 
-- [ ] **Görev 1.4: Oturum (Session) Yönetimini Başlatma**
+- [x] **Görev 1.4: Oturum (Session) Yönetimini Başlatma**
   - `app.use(express.json());` satırının hemen altına aşağıdaki "Session Middleware" bloğunu ekle:
     ```javascript
     app.use(session({
@@ -93,10 +66,10 @@ Bu bölüm, uygulamaya e-posta gerektirmeyen, kontrollü bir kullanıcı doğrul
     }));
     ```
 
-- [ ] **Görev 1.5: İlk Yönetici Kullanıcısını Oluşturma**
+- [x] **Görev 1.5: İlk Yönetici Kullanıcısını Oluşturma**
   - Sisteme giriş yapabilmek için veritabanına manuel olarak (veya geçici bir script ile) şifresi `bcrypt` ile hash'lenmiş bir yönetici kullanıcısı ekle.
 
-- [ ] **Görev 1.6: API Endpoint'lerini Oluşturma**
+- [x] **Görev 1.6: API Endpoint'lerini Oluşturma**
   - `server.js` dosyasına aşağıdaki API endpoint'lerini sırasıyla ekle:
     - `POST /api/login` (Giriş Yapma)
     - `POST /api/logout` (Çıkış Yapma)
@@ -107,24 +80,57 @@ Bu bölüm, uygulamaya e-posta gerektirmeyen, kontrollü bir kullanıcı doğrul
     - `POST /api/user/change-password` (Giriş Yapan Kullanıcının Kendi Şifresini Değiştirmesi)
     - `DELETE /api/users/:id` (Kullanıcı Silme)
 
-- [ ] **Görev 1.7: Mevcut API'ları Güvenli Hale Getirme**
+- [x] **Görev 1.7: Mevcut API'ları Güvenli Hale Getirme**
   - `login` dışındaki tüm API endpoint'lerinin başına, kullanıcının giriş yapıp yapmadığını kontrol eden bir "middleware" fonksiyonu ekle.
 
 ### Aşama 2: Frontend (Arayüz) Değişiklikleri
 
-- [ ] **Görev 2.1: Yeni HTML Dosyaları Oluşturma**
+- [x] **Görev 2.1: Yeni HTML Dosyaları Oluşturma**
   - `public` klasöründe `login.html` ve `login.js` dosyalarını oluştur. `login.html` sadece kullanıcı adı ve şifre soran bir form içerecek.
 
-- [ ] **Görev 2.2: Giriş Kontrolü Ekleme**
+- [x] **Görev 2.2: Giriş Kontrolü Ekleme**
   - `script.js` dosyasının en başına, sayfa yüklendiğinde `/api/session-check`'e istek gönderen bir kod ekle. Başarılı bir oturum yoksa kullanıcıyı `login.html`'e yönlendir.
 
-- [ ] **Görev 2.3: "Yönetim Paneli"ne Kullanıcılar Sekmesi Ekleme**
+- [x] **Görev 2.3: "Yönetim Paneli"ne Kullanıcılar Sekmesi Ekleme**
   - `getYonetimHTML` fonksiyonunu "Kullanıcılar" adında yeni bir sekme içerecek şekilde güncelle.
   - Bu sekmede, kullanıcıları listeleyen bir tablo, "Yeni Kullanıcı Ekle" butonu ve her satır için "Düzenle", "Şifre Sıfırla", "Sil" butonları olsun.
 
-- [ ] **Görev 2.4: Yeni Modal Pencereleri Oluşturma**
+- [x] **Görev 2.4: Yeni Modal Pencereleri Oluşturma**
   - `script.js` dosyasına "Yeni Kullanıcı Ekleme" ve "Kullanıcı Şifresi Sıfırlama" işlemleri için yeni modal HTML'i üreten ve olaylarını yöneten fonksiyonlar ekle.
 
-- [ ] **Görev 2.5: Çıkış ve Kişisel Şifre Değiştirme Fonksiyonları**
+- [x] **Görev 2.5: Çıkış ve Kişisel Şifre Değiştirme Fonksiyonları**
   - `index.html`'e "Çıkış Yap" butonu ekle. Bu buton `/api/logout`'a istek göndermeli.
   - Uygulama arayüzüne, giriş yapmış kullanıcının kendi şifresini değiştirebileceği bir "Şifre Değiştir" butonu ve modalı ekle.
+
+
+  ### Yapılacaklar Listesi (To-Do)
+
+  ## Bölüm 3: Yeni Özellik Önerileri (Gelecek Geliştirmeler)
+
+Bu bölüm, uygulamanın işlevselliğini ve kullanıcı deneyimini daha da artırmak için eklenebilecek yeni özellikleri listeler.
+
+### Öncelik 1: Hemen Değer Katacak Özellikler
+
+- [ ] **Bulgu'lara Dosya Ekleme**
+  - **Açıklama:** "Yeni Bulgu Ekle/Düzenle" ekranına, ekran görüntüsü veya log dosyası gibi dosyaların eklenebileceği bir alan eklemek.
+  - **Teknik Adımlar:** Backend'e dosya yükleme işlemleri için `multer` kütüphanesini eklemek. Yüklenen dosyaları sunucuda bir klasörde saklamak ve veritabanında hangi bulguya ait olduğunu ilişkilendirmek.
+
+- [ ] **Yorum Sistemi ve Değişiklik Geçmişi (Audit Log)**
+  - **Açıklama:** Her bulgunun altına, ilgili kişilerle yazışmak için bir yorum bölümü eklemek. Ayrıca, bulgu üzerinde yapılan her değişikliğin (örn: durum değişikliği, atanan kişi değişikliği) tarihçesini tutmak.
+  - **Teknik Adımlar:** Veritabanına `comments` ve `history` adında yeni tablolar eklemek. Backend'de bu tabloları yönetecek API'lar oluşturmak. Frontend'de bu verileri gösterecek arayüzleri tasarlamak.
+
+### Öncelik 2: Veri ve Raporlama İyileştirmeleri
+
+- [ ] **Gelişmiş Dashboard ve Filtreleme**
+  - **Açıklama:** Ana sayfadaki dashboard'a "Son 30 gün", "Bu Yıl" gibi tarih aralığı filtreleri eklemek. Grafiklerin üzerine tıklandığında ilgili detay sayfasına yönlendirme yapmak.
+  - **Teknik Adımlar:** Backend API'larını tarih parametreleri alacak şekilde güncellemek. Frontend'de `Chart.js`'in tıklama olaylarını kullanarak yönlendirmeleri yapmak.
+
+- [ ] **Veriyi Dışa Aktarma (Export to CSV/Excel)**
+  - **Açıklama:** "Bulgu Takibi" sayfasındaki filtrelenmiş listeyi bir "Dışa Aktar" butonuyla CSV dosyası olarak indirebilme özelliği.
+  - **Teknik Adımlar:** Backend'de `/api/bulgular/export` gibi yeni bir API endpoint'i oluşturmak. Bu endpoint'in veriyi CSV formatına çevirip tarayıcıya göndermesini sağlamak.
+
+### Öncelik 3: Yapısal ve Güvenlik Geliştirmeleri
+
+- [ ] **Kullanıcı Rolleri ve Yetkilendirme (Admin, User)**
+  - **Açıklama:** Uygulamada "Admin" ve "Normal Kullanıcı" gibi roller tanımlamak. Sadece Admin yetkisine sahip kullanıcıların yeni kullanıcı ekleyebilmesi, vendor/model silebilmesi gibi yetki kontrolleri eklemek.
+  - **Teknik Adımlar:** `users` tablosuna bir `role` kolonu eklemek. Backend'deki API'ların, işlemi yapmaya çalışan kullanıcının rolünü kontrol etmesini sağlamak. Frontend'de, kullanıcının rolüne göre belirli butonları (örn: "Yeni Kullanıcı Ekle") gizlemek veya göstermek.

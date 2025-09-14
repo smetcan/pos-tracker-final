@@ -86,20 +86,21 @@ let bulguFilters = {
     }
 
     function showErrorModal(message) {
-        modalContainer.innerHTML = `
-            <div class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-50">
-                <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                <div class="mt-3 text-center">
-                    <h3 class="text-lg leading-6 font-medium text-red-600">Bir Hata Oluştu</h3>
-                    <p class="text-sm text-gray-600 mt-2 px-7 py-3">${message}</p>
-                    <div class="items-center px-4 py-3">
-                        <button id="close-error-modal" class="px-4 py-2 bg-gray-200 rounded-md">Kapat</button>
-                    </div>
+    modalContainer.innerHTML = `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all text-center">
+                <div class="p-6">
+                    <svg class="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <h3 class="text-lg font-semibold text-red-600">Bir Hata Oluştu</h3>
+                    <p class="mt-2 text-sm text-gray-600">${message}</p>
+                </div>
+                <div class="flex items-center justify-center p-4 border-t rounded-b-md bg-gray-50">
+                    <button id="close-error-modal" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-medium">Kapat</button>
                 </div>
             </div>
         </div>`;
-        document.getElementById('close-error-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');
-    }
+    document.getElementById('close-error-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');
+}
 
     function sortData(data, sortConfig) {
         const { key, direction } = sortConfig;
@@ -791,20 +792,29 @@ function getChangePasswordModalHTML() {
 }
 
     function getBulguViewModalHTML(bulgu) {
-        const vendorName = vendorsData.find(v => v.id == bulgu.vendorId)?.name || '';
-        const versionName = versionsData.find(v => v.id == bulgu.cozumVersiyonId)?.versionNumber || '';
-        let affectedModelsArray = [];
-        if (bulgu.modelIds) {
-            const ids = (typeof bulgu.modelIds === 'string') ? bulgu.modelIds.split(',').map(s => s.trim()) : bulgu.modelIds;
-            affectedModelsArray = ids.map(id => modelsData.find(m => String(m.id) === String(id))?.name).filter(Boolean);
-        }
-        const modelsHtml = affectedModelsArray.length > 0 ? affectedModelsArray.map(m => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${m}</span>`).join('') : '-';
+    const vendorName = vendorsData.find(v => v.id == bulgu.vendorId)?.name || '';
+    const versionName = versionsData.find(v => v.id == bulgu.cozumVersiyonId)?.versionNumber || '';
+    let affectedModelsArray = [];
+    if (bulgu.modelIds) {
+        const ids = (typeof bulgu.modelIds === 'string') ? bulgu.modelIds.split(',').map(s => s.trim()) : bulgu.modelIds;
+        affectedModelsArray = ids.map(id => modelsData.find(m => String(m.id) === String(id))?.name).filter(Boolean);
+    }
+    const modelsHtml = affectedModelsArray.length > 0 ? affectedModelsArray.map(m => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${m}</span>`).join('') : '-';
 
-        return `
-            <div class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-50">
-                <div class="relative mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-                    <h3 class="text-xl leading-6 font-medium text-gray-900 mb-4">Bulgu Detayları: #${bulgu.id} - ${bulgu.baslik}</h3>
-                    <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all flex flex-col max-h-full">
+                
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Bulgu Detayları: #${bulgu.id}</h3>
+                    <button type="button" data-close-bulgu-view class="absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto space-y-4">
+                    <h4 class="text-lg font-medium text-gray-900">${bulgu.baslik}</h4>
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
                         <div><strong>Vendor:</strong> ${vendorName}</div>
                         <div><strong>Bulgu Tipi:</strong> ${bulgu.bulguTipi}</div>
                         <div><strong>Etki Seviyesi:</strong> ${bulgu.etkiSeviyesi}</div>
@@ -816,20 +826,22 @@ function getChangePasswordModalHTML() {
                         <div><strong>Çözüm Onaylayan:</strong> ${bulgu.cozumOnaylayanKullanici || '-'}</div>
                         <div><strong>Çözüm Onay Tarihi:</strong> ${bulgu.cozumOnayTarihi || '-'}</div>
                     </div>
-                    <div class="mb-4">
-                        <strong>Etkilenen Modeller:</strong>
+                    <div>
+                        <strong class="text-sm font-medium">Etkilenen Modeller:</strong>
                         <div class="mt-2">${modelsHtml}</div>
                     </div>
-                    <div class="mb-4">
-                        <strong>Detaylı Açıklama:</strong>
-                        <p class="mt-2 p-3 bg-gray-100 rounded-md whitespace-pre-wrap">${bulgu.detayliAciklama || '-'}</p>
-                    </div>
-                    <div class="items-center px-4 py-3 text-right">
-                        <button type="button" data-close-bulgu-view class="px-4 py-2 bg-gray-200 rounded-md">Kapat</button>
+                    <div>
+                        <strong class="text-sm font-medium">Detaylı Açıklama:</strong>
+                        <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${bulgu.detayliAciklama || '-'}</p>
                     </div>
                 </div>
-            </div>`;
-    }
+
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
+                    <button type="button" data-close-bulgu-view class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
+                </div>
+            </div>
+        </div>`;
+}
 
     function getVersionViewModalHTML(version) {
     const modelsHtml = version.models
@@ -837,29 +849,36 @@ function getChangePasswordModalHTML() {
         : '-';
 
     return `
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-50">
-            <div class="relative mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white overflow-y-auto max-h-[90vh]">
-                <h3 class="text-xl leading-6 font-medium text-gray-900 mb-4">Versiyon Detayları: ${version.versionNumber}</h3>
-                <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
-                    <div><strong>Vendor:</strong> ${version.vendorName}</div>
-                    <div><strong>Teslim Tarihi:</strong> ${version.deliveryDate || '-'}</div>
-                    <div><strong>Durum:</strong> <span class="px-2 py-1 text-xs font-medium rounded-full ${version.status === 'Prod' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${version.status}</span></div>
-                    <div><strong>Prod Onay Tarihi:</strong> ${version.prodOnayDate || '-'}</div>
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Versiyon Detayları: ${version.versionNumber}</h3>
+                    <button type="button" class="close-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
                 </div>
-                <div class="mb-4">
-                    <strong>Geçerli Modeller:</strong>
-                    <div class="mt-2">${modelsHtml}</div>
+                <div class="p-6 overflow-y-auto space-y-4">
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
+                        <div><strong>Vendor:</strong> ${version.vendorName}</div>
+                        <div><strong>Teslim Tarihi:</strong> ${version.deliveryDate || '-'}</div>
+                        <div><strong>Durum:</strong> <span class="px-2 py-1 text-xs font-medium rounded-full ${version.status === 'Prod' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${version.status}</span></div>
+                        <div><strong>Prod Onay Tarihi:</strong> ${version.prodOnayDate || '-'}</div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Geçerli Modeller:</strong>
+                        <div class="mt-2">${modelsHtml}</div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Bug/İstek Tarihçesi:</strong>
+                        <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${version.bugIstekTarihcesi || '-'}</p>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Ekler:</strong>
+                        <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${version.ekler || '-'}</p>
+                    </div>
                 </div>
-                <div class="mb-4">
-                    <strong>Bug/İstek Tarihçesi:</strong>
-                    <p class="mt-2 p-3 bg-gray-100 rounded-md whitespace-pre-wrap">${version.bugIstekTarihcesi || '-'}</p>
-                </div>
-                <div class="mb-4">
-                    <strong>Ekler:</strong>
-                    <p class="mt-2 p-3 bg-gray-100 rounded-md whitespace-pre-wrap">${version.ekler || '-'}</p>
-                </div>
-                <div class="items-center px-4 py-3 text-right">
-                    <button type="button" class="close-modal-btn px-4 py-2 bg-gray-200 rounded-md">Kapat</button>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
+                    <button type="button" class="close-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
                 </div>
             </div>
         </div>`;
@@ -985,17 +1004,20 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}) {
 }
 
     function getVendorContactsModalHTML(vendor, contacts = []) {
-    // Kopyalama ikonu için SVG tanımı
     const copyIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 
     return `
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-50">
-            <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2 text-center">${vendor.name} İletişim Kişileri</h3>
-                <hr class="mb-4">
-                <div id="vendor-contacts-list" class="mb-4">
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${vendor.name} İletişim Kişileri</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto">
                     ${contacts.length > 0 ? contacts.map(contact => `
-                        <div class="flex justify-between items-center p-2 border-b last:border-none">
+                        <div class="flex justify-between items-center py-2 border-b last:border-none">
                             <div>
                                 <p class="font-medium">${contact.name} ${contact.preferred ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Birincil</span>' : ''}</p>
                                 <p class="text-sm text-gray-600">${contact.email || ''} ${contact.phone ? `(${contact.phone})` : ''}</p>
@@ -1008,57 +1030,65 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}) {
                             </div>
                             ` : ''}
                         </div>
-                    `).join('') : '<p class="text-sm text-gray-500">Henüz iletişim kişisi eklenmedi.</p>'}
+                    `).join('') : '<p class="text-sm text-gray-500 text-center">Henüz iletişim kişisi eklenmedi.</p>'}
                 </div>
-                <div class="items-center px-4 py-3 text-right">
-                    <button type="button" id="close-contacts-modal" class="px-4 py-2 bg-gray-200 rounded-md">Kapat</button>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
                 </div>
             </div>
         </div>`;
 }
 
     function getDeleteConfirmModalHTML(message, subMessage = '') {
-        return `
-            <div class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-50">
-                <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                    <div class="mt-3 text-center">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900">Silme Onayı</h3>
-                        <p class="text-sm text-gray-600 mt-2 px-7 py-3">${message}</p>
-                        ${subMessage ? `<p class="text-xs text-gray-500">${subMessage}</p>` : ''}
-                        <div class="items-center px-4 py-3">
-                            <button id="cancel-delete" class="px-4 py-2 bg-gray-200 rounded-md mr-2">İptal</button>
-                            <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-md">Sil</button>
-                        </div>
-                    </div>
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all text-center">
+                <div class="p-6">
+                    <svg class="mx-auto mb-4 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h3 class="text-lg font-semibold text-gray-800">Emin misiniz?</h3>
+                    <p class="mt-2 text-sm text-gray-600">${message}</p>
+                    ${subMessage ? `<p class="mt-1 text-xs text-gray-500">${subMessage}</p>` : ''}
                 </div>
-            </div>`;
-    }
+                <div class="flex items-center justify-center p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button id="cancel-delete" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium">Evet, Sil</button>
+                </div>
+            </div>
+        </div>`;
+}
 
     function getBulguImportModalHTML() {
-        return `
-            <div class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center z-50">
-                <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Bulgu İçeri Aktar</h3>
-                    <form id="bulgu-import-form">
-                        <div class="mb-4">
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Bulgu İçeri Aktar</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="bulgu-import-form" class="space-y-4">
+                        <div>
                             <label for="csv-file-input" class="block text-sm font-medium text-gray-700">CSV Dosyası Seçin</label>
                             <input type="file" id="csv-file-input" accept=".csv" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
                         </div>
-                        <div id="import-progress" class="hidden mb-4 text-sm text-gray-600">
+                        <div id="import-progress" class="hidden text-sm text-gray-600">
                             <p>Yükleniyor... <span id="progress-count">0</span>/<span id="total-records">0</span></p>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                                 <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
                             </div>
                         </div>
-                        <div id="import-results" class="hidden mb-4 p-3 border rounded-md bg-gray-50 max-h-40 overflow-y-auto text-sm"></div>
-                        <div class="items-center px-4 py-3 text-right">
-                            <button type="button" id="cancel-import-modal" class="px-4 py-2 bg-gray-200 rounded-md mr-2">İptal</button>
-                            <button type="submit" id="start-import-btn" class="px-4 py-2 bg-blue-500 text-white rounded-md">İçeri Aktar</button>
-                        </div>
+                        <div id="import-results" class="hidden p-3 border rounded-md bg-gray-50 max-h-40 overflow-y-auto text-sm"></div>
                     </form>
                 </div>
-            </div>`;
-    }
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="bulgu-import-form" id="start-import-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">İçeri Aktar</button>
+                </div>
+            </div>
+        </div>`;
+}
 
     async function loadVendorContacts(vendorId) {
         try {
@@ -1590,78 +1620,80 @@ function attachBulguModalListeners(bulgu = {}) {
 }
 
     function attachBulguImportModalListeners() {
-        document.getElementById('cancel-import-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');
-        document.getElementById('bulgu-import-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fileInput = document.getElementById('csv-file-input');
-            const progressDiv = document.getElementById('import-progress');
-            const progressBar = document.getElementById('progress-bar');
-            const progressCount = document.getElementById('progress-count');
-            const totalRecords = document.getElementById('total-records');
-            const importResultsDiv = document.getElementById('import-results');
-            const startImportBtn = document.getElementById('start-import-btn');
+    // DÜZELTME: class ile tüm iptal butonlarını dinle
+    document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+    
+    document.getElementById('bulgu-import-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('csv-file-input');
+        const progressDiv = document.getElementById('import-progress');
+        const progressBar = document.getElementById('progress-bar');
+        const progressCount = document.getElementById('progress-count');
+        const totalRecords = document.getElementById('total-records');
+        const importResultsDiv = document.getElementById('import-results');
+        const startImportBtn = document.getElementById('start-import-btn');
 
-            if (!fileInput.files.length) {
-                showErrorModal('Lütfen bir CSV dosyası seçin.');
-                return;
-            }
+        if (!fileInput.files.length) {
+            showErrorModal('Lütfen bir CSV dosyası seçin.');
+            return;
+        }
 
-            const file = fileInput.files[0];
-            progressDiv.classList.remove('hidden');
-            importResultsDiv.classList.add('hidden');
-            importResultsDiv.innerHTML = '';
-            startImportBtn.disabled = true;
+        const file = fileInput.files[0];
+        progressDiv.classList.remove('hidden');
+        importResultsDiv.classList.add('hidden');
+        importResultsDiv.innerHTML = '';
+        startImportBtn.disabled = true;
 
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: async (results) => {
-                    const records = results.data;
-                    totalRecords.textContent = records.length;
-                    let processedCount = 0;
-                    const batchSize = 50; // Process in batches
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const records = results.data;
+                totalRecords.textContent = records.length;
+                let processedCount = 0;
+                const batchSize = 50;
 
-                    for (let i = 0; i < records.length; i += batchSize) {
-                        const batch = records.slice(i, i + batchSize);
-                        try {
-                            const response = await apiRequest('/api/bulgular/import', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ records: batch })
+                for (let i = 0; i < records.length; i += batchSize) {
+                    const batch = records.slice(i, i + batchSize);
+                    try {
+                        const response = await apiRequest('/api/bulgular/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ records: batch })
+                        });
+                        if (response.errors && response.errors.length > 0) {
+                            response.errors.forEach(err => {
+                                importResultsDiv.innerHTML += `<p class="text-red-600">Satır ${err.rowIndex}: ${err.error}</p>`;
                             });
-                            if (response.errors && response.errors.length > 0) {
-                                response.errors.forEach(err => {
-                                    importResultsDiv.innerHTML += `<p class="text-red-600">Satır ${err.rowIndex}: ${err.error}</p>`;
-                                });
-                            }
-                            processedCount += batch.length;
-                            progressCount.textContent = processedCount;
-                            progressBar.style.width = `${(processedCount / records.length) * 100}%`;
-                        } catch (error) {
-                            importResultsDiv.innerHTML += `<p class="text-red-600">Toplu işlem sırasında hata: ${error.message}</p>`;
-                            processedCount += batch.length; // Still count as processed to advance progress
-                            progressCount.textContent = processedCount;
-                            progressBar.style.width = `${(processedCount / records.length) * 100}%`;
                         }
+                        processedCount += batch.length;
+                        progressCount.textContent = processedCount;
+                        progressBar.style.width = `${(processedCount / records.length) * 100}%`;
+                    } catch (error) {
+                        importResultsDiv.innerHTML += `<p class="text-red-600">Toplu işlem sırasında hata: ${error.message}</p>`;
+                        processedCount += batch.length;
+                        progressCount.textContent = processedCount;
+                        progressBar.style.width = `${(processedCount / records.length) * 100}%`;
                     }
-
-                    progressDiv.classList.add('hidden');
-                    importResultsDiv.classList.remove('hidden');
-                    startImportBtn.disabled = false;
-                    bulgularData = []; // Invalidate cache
-                    router(); // Re-render current view
-                    if (importResultsDiv.innerHTML === '') {
-                        importResultsDiv.innerHTML = '<p class="text-green-600">Tüm kayıtlar başarıyla içeri aktarıldı.</p>';
-                    }
-                },
-                error: (err) => {
-                    showErrorModal('CSV dosyasını ayrıştırma hatası: ' + err.message);
-                    progressDiv.classList.add('hidden');
-                    startImportBtn.disabled = false;
                 }
-            });
+
+                progressDiv.classList.add('hidden');
+                importResultsDiv.classList.remove('hidden');
+                startImportBtn.disabled = false;
+                bulgularData = [];
+                fetchAndRenderBulgular({ page: 1 }); // Sayfayı yenile
+                if (importResultsDiv.innerHTML === '') {
+                    importResultsDiv.innerHTML = '<p class="text-green-600">Tüm kayıtlar başarıyla içeri aktarıldı.</p>';
+                }
+            },
+            error: (err) => {
+                showErrorModal('CSV dosyasını ayrıştırma hatası: ' + err.message);
+                progressDiv.classList.add('hidden');
+                startImportBtn.disabled = false;
+            }
         });
-    }
+    });
+}
 
     function renderDashboardCharts(stats) {
     const { statusDistribution, bulguByVendor, sonBulgular } = stats;
@@ -1784,8 +1816,8 @@ function attachYonetimEventListeners() {
 
     // --- Vendor Butonları ---
     document.getElementById('add-vendor-btn')?.addEventListener('click', () => {
-        modalContainer.innerHTML = getVendorModalHTML(); // Boş vendor objesi ile HTML oluştur
-        attachVendorModalListeners(); // Olayları bağla
+        modalContainer.innerHTML = getVendorModalHTML();
+        attachVendorModalListeners();
     });
     document.querySelectorAll('.edit-vendor-btn').forEach(button => {
         button.addEventListener('click', async () => {
@@ -1824,7 +1856,9 @@ function attachYonetimEventListeners() {
             if (!vendorToView) return;
             const contacts = await loadVendorContacts(vendorToView.id);
             modalContainer.innerHTML = getVendorContactsModalHTML(vendorToView, contacts);
-            document.getElementById('close-contacts-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');
+            // DÜZELTME: class ile tüm kapatma butonlarını dinle
+            modalContainer.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+            
             document.querySelectorAll('.copy-email-btn').forEach(copyBtn => {
                 copyBtn.addEventListener('click', (e) => {
                     const buttonElement = e.currentTarget;
@@ -1888,9 +1922,10 @@ function attachYonetimEventListeners() {
             const versionToShow = versionsData.find(v => v.id == versionId);
             if (versionToShow) {
                 modalContainer.innerHTML = getVersionViewModalHTML(versionToShow);
-                modalContainer.querySelector('.close-modal-btn')?.addEventListener('click', () => {
+                // DÜZELTME: class ile tüm kapatma butonlarını dinle
+                modalContainer.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => {
                     modalContainer.innerHTML = '';
-                });
+                }));
             }
         });
     });
@@ -1926,11 +1961,11 @@ function attachYonetimEventListeners() {
             });
         });
     });
+
+    // --- Kullanıcı Yönetimi Butonları ---
     document.getElementById('add-user-btn')?.addEventListener('click', () => {
         modalContainer.innerHTML = getUserModalHTML();
-        
         document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
-
         document.getElementById('user-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = {
@@ -1943,21 +1978,18 @@ function attachYonetimEventListeners() {
             try {
                 await apiRequest('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 modalContainer.innerHTML = '';
-                router(); // Yönetim sayfasını yenile
+                router();
             } catch (error) {
                 showErrorModal(error.message);
             }
         });
     });
-
     document.querySelectorAll('.reset-password-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const userId = e.currentTarget.dataset.userId;
             const userName = e.currentTarget.dataset.userName;
             modalContainer.innerHTML = getResetPasswordModalHTML(userName);
-
             document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
-
             document.getElementById('reset-password-form')?.addEventListener('submit', async (formEvent) => {
                 formEvent.preventDefault();
                 const newPassword = document.getElementById('new-password').value;
@@ -1968,26 +2000,23 @@ function attachYonetimEventListeners() {
                         body: JSON.stringify({ newPassword })
                     });
                     modalContainer.innerHTML = '';
-                    // Başarı mesajı eklenebilir
                 } catch (error) {
                     showErrorModal(error.message);
                 }
             });
         });
     });
-    
     document.querySelectorAll('.delete-user-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const userId = e.currentTarget.dataset.userId;
             const userName = e.currentTarget.dataset.userName;
             modalContainer.innerHTML = getDeleteConfirmModalHTML(`'${userName}' kullanıcısı silinsin mi?`);
-            
             document.getElementById('cancel-delete').addEventListener('click', () => modalContainer.innerHTML = '');
             document.getElementById('confirm-delete').addEventListener('click', async () => {
                 try {
                     await apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
                     modalContainer.innerHTML = '';
-                    router(); // Yönetim sayfasını yenile
+                    router();
                 } catch (error) {
                     showErrorModal(error.message);
                 }

@@ -1,0 +1,3 @@
+İletişim Kişileri Penceresi modal penceresi "Kapat" butonuna tıklayınca kapanmıyor.
+Versiyon Görüntüleme Penceresi modal penceresi "Kapat" butonuna tıklayınca kapanmıyor.
+Bulgu İçeri Aktar modal penceresi "İptal" butonuna tıklayınca kapanmıyor.
