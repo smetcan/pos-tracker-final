@@ -791,7 +791,7 @@ function getChangePasswordModalHTML() {
         </div>`;
 }
 
-    function getBulguViewModalHTML(bulgu) {
+    function getBulguViewModalHTML(bulgu, attachments = []) {
     const vendorName = vendorsData.find(v => v.id == bulgu.vendorId)?.name || '';
     const versionName = versionsData.find(v => v.id == bulgu.cozumVersiyonId)?.versionNumber || '';
     let affectedModelsArray = [];
@@ -801,17 +801,23 @@ function getChangePasswordModalHTML() {
     }
     const modelsHtml = affectedModelsArray.length > 0 ? affectedModelsArray.map(m => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${m}</span>`).join('') : '-';
 
+    // YENİ: Eklenti listesi için HTML oluştur
+    const attachmentsHtml = attachments.length > 0 ? attachments.map(att => `
+        <a href="/${att.filePath}" target="_blank" class="text-sm text-blue-600 hover:underline flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+            ${att.originalName}
+        </a>
+    `).join('') : '<p class="text-sm text-gray-500">Ekli dosya bulunmuyor.</p>';
+
     return `
         <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
             <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all flex flex-col max-h-full">
-                
                 <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
                     <h3 class="text-xl font-semibold text-gray-800">Bulgu Detayları: #${bulgu.id}</h3>
                     <button type="button" data-close-bulgu-view class="absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
                     </button>
                 </div>
-
                 <div class="p-6 overflow-y-auto space-y-4">
                     <h4 class="text-lg font-medium text-gray-900">${bulgu.baslik}</h4>
                     <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
@@ -821,10 +827,6 @@ function getChangePasswordModalHTML() {
                         <div><strong>Tespit Tarihi:</strong> ${bulgu.tespitTarihi}</div>
                         <div><strong>Durum:</strong> ${bulgu.status}</div>
                         <div><strong>Çözüm Versiyon:</strong> ${versionName || '-'}</div>
-                        <div><strong>Giren Kullanıcı:</strong> ${bulgu.girenKullanici || '-'}</div>
-                        <div><strong>Vendor Takip No:</strong> ${bulgu.vendorTrackerNo || '-'}</div>
-                        <div><strong>Çözüm Onaylayan:</strong> ${bulgu.cozumOnaylayanKullanici || '-'}</div>
-                        <div><strong>Çözüm Onay Tarihi:</strong> ${bulgu.cozumOnayTarihi || '-'}</div>
                     </div>
                     <div>
                         <strong class="text-sm font-medium">Etkilenen Modeller:</strong>
@@ -834,8 +836,13 @@ function getChangePasswordModalHTML() {
                         <strong class="text-sm font-medium">Detaylı Açıklama:</strong>
                         <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${bulgu.detayliAciklama || '-'}</p>
                     </div>
+                    <div>
+                        <strong class="text-sm font-medium">Ekli Dosyalar:</strong>
+                        <div class="mt-2 p-3 bg-gray-50 border rounded-md space-y-2">
+                            ${attachmentsHtml}
+                        </div>
+                    </div>
                 </div>
-
                 <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
                     <button type="button" data-close-bulgu-view class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
                 </div>
@@ -884,7 +891,7 @@ function getChangePasswordModalHTML() {
         </div>`;
 }
 
-function getBulguModalHTML(vendors, models, versions, bulgu = {}) {
+function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = []) {
     const isEdit = bulgu.id !== undefined;
     const title = isEdit ? 'Bulgu/Talep Düzenle' : 'Yeni Bulgu/Talep Ekle';
     
@@ -906,6 +913,18 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}) {
         <div class="flex items-center">
             <input type="checkbox" id="model-${m.id}" value="${m.id}" class="h-4 w-4 rounded border-gray-300 model-checkbox" ${selectedModelIds.includes(String(m.id)) ? 'checked' : ''}>
             <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+        </div>
+    `).join('');
+
+    const attachmentsHtml = attachments.map(att => `
+        <div class="flex items-center justify-between text-sm py-1" id="attachment-${att.id}">
+            <a href="/${att.filePath.replace(/\\/g, '/')}" target="_blank" class="text-blue-600 hover:underline truncate pr-2 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                ${att.originalName}
+            </a>
+            <button type="button" class="delete-attachment-btn text-red-500 hover:text-red-700 p-1 flex-shrink-0" data-attachment-id="${att.id}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+            </button>
         </div>
     `).join('');
 
@@ -992,9 +1011,20 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}) {
                             <label for="bulgu-detayli-aciklama" class="block text-sm font-medium text-gray-700">Detaylı Açıklama</label>
                             <textarea id="bulgu-detayli-aciklama" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">${bulgu.detayliAciklama || ''}</textarea>
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">${isEdit ? 'Ekli Dosyalar' : 'Dosya Ekle'}</label>
+                            ${isEdit ? `
+                            <div id="attachments-list" class="mt-1 border rounded-md p-2 bg-gray-50 max-h-32 overflow-y-auto">
+                                ${attachments.length > 0 ? attachmentsHtml : '<p class="text-xs text-gray-500 text-center py-2">Ekli dosya yok.</p>'}
+                            </div>
+                            ` : ''}
+                            <div class="mt-2">
+                                ${isEdit ? `<label for="bulgu-attachments" class="block text-sm font-medium text-gray-700 mb-1">Yeni Dosya Yükle</label>` : ''}
+                                <input type="file" id="bulgu-attachments" name="attachments" multiple class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            </div>
+                        </div>
                     </form>
                 </div>
-
                 <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
                     <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
                     <button type="submit" form="bulgu-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
@@ -1511,8 +1541,7 @@ function attachVersionModalListeners(version = null) {
     });
 }
 
-function attachBulguModalListeners(bulgu = {}) {
-    // Dinamik elemanları seç
+function attachBulguModalListeners(bulgu = {}, attachments = []) {
     const vendorSelect = document.getElementById('bulgu-vendor-id');
     const modelsContainer = document.getElementById('bulgu-models-container');
     const versionSelect = document.getElementById('bulgu-cozum-versiyon-id');
@@ -1522,7 +1551,6 @@ function attachBulguModalListeners(bulgu = {}) {
     const onaylayanInput = document.getElementById('bulgu-cozum-onaylayan-kullanici');
     const onayTarihiInput = document.getElementById('bulgu-cozum-onay-tarihi');
 
-    // Model listesini vendor'a göre güncelleyen fonksiyon
     const updateModelsList = () => {
         const selectedVendorId = vendorSelect.value;
         selectAllCheckbox.checked = false;
@@ -1542,8 +1570,7 @@ function attachBulguModalListeners(bulgu = {}) {
             </div>
         `).join('');
     };
-    
-    // Versiyon listesini vendor'a göre güncelleyen fonksiyon
+
     const updateVersionsList = () => {
         const selectedVendorId = vendorSelect.value;
         if (!selectedVendorId) {
@@ -1556,7 +1583,6 @@ function attachBulguModalListeners(bulgu = {}) {
         versionSelect.innerHTML = optionsHTML;
     };
 
-    // Onay alanlarını durum'a göre göster/gizle
     const toggleOnayFields = () => {
         if (statusSelect.value === 'Kapalı') {
             onayFieldsContainer.classList.remove('hidden');
@@ -1569,7 +1595,6 @@ function attachBulguModalListeners(bulgu = {}) {
         }
     };
 
-    // Olay dinleyicilerini ekle
     vendorSelect.addEventListener('change', () => {
         updateModelsList();
         updateVersionsList();
@@ -1581,14 +1606,32 @@ function attachBulguModalListeners(bulgu = {}) {
         });
     });
 
-    // Modal iptal ve gönderme olayları
     document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
-    
+
+    document.querySelectorAll('.delete-attachment-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const attachmentId = e.currentTarget.dataset.attachmentId;
+            if (confirm('Bu eki silmek istediğinizden emin misiniz?')) {
+                try {
+                    await apiRequest(`/api/attachments/${attachmentId}`, { method: 'DELETE' });
+                    document.getElementById(`attachment-${attachmentId}`).remove();
+                    const attachmentsList = document.getElementById('attachments-list');
+                    if (attachmentsList && attachmentsList.children.length === 0) {
+                        attachmentsList.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">Ekli dosya yok.</p>';
+                    }
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            }
+        });
+    });
+
     document.getElementById('bulgu-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = bulgu.id;
         const selectedModelIds = Array.from(modelsContainer.querySelectorAll('.model-checkbox:checked'))
                                       .map(checkbox => Number(checkbox.value));
+        
         const bulguData = {
             baslik: document.getElementById('bulgu-baslik').value,
             vendorId: Number(vendorSelect.value),
@@ -1606,11 +1649,32 @@ function attachBulguModalListeners(bulgu = {}) {
         };
 
         try {
+            let targetBulguId = id;
+
             if (id) {
                 await apiRequest(`/api/bulgular/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bulguData) });
             } else {
-                await apiRequest('/api/bulgular', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bulguData) });
+                const newBulguResponse = await apiRequest('/api/bulgular', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bulguData) });
+                targetBulguId = newBulguResponse.id;
             }
+            
+            const fileInput = document.getElementById('bulgu-attachments');
+            if (targetBulguId && fileInput && fileInput.files.length > 0) {
+                const formData = new FormData();
+                for (const file of fileInput.files) {
+                    formData.append('attachments', file);
+                }
+                
+                const fileResponse = await fetch(`/api/bulgu/${targetBulguId}/attachments`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!fileResponse.ok) {
+                    const errorData = await fileResponse.json();
+                    throw new Error(errorData.error || 'Dosya yüklenirken bir hata oluştu.');
+                }
+            }
+
             modalContainer.innerHTML = '';
             fetchAndRenderBulgular({ page: bulguFilters.currentPage });
         } catch (error) {
@@ -1725,8 +1789,9 @@ function attachBulguModalListeners(bulgu = {}) {
 
 function attachBulguTableActionListeners(bulgular) {
     document.getElementById('add-bulgu-btn')?.addEventListener('click', () => {
-        modalContainer.innerHTML = getBulguModalHTML(vendorsData, modelsData, versionsData);
-        attachBulguModalListeners();
+        // Yeni bulgu eklerken dosya ekleme özelliği olmayacağı için boş array gönderiyoruz.
+        modalContainer.innerHTML = getBulguModalHTML(vendorsData, modelsData, versionsData, {});
+        attachBulguModalListeners({});
     });
 
     document.getElementById('import-bulgu-btn')?.addEventListener('click', () => {
@@ -1735,24 +1800,28 @@ function attachBulguTableActionListeners(bulgular) {
     });
 
     document.querySelectorAll('.view-bulgu-btn').forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => { // async eklendi
             e.preventDefault();
             const id = link.dataset.bulguId;
             const bulgu = bulgular.find(b => String(b.id) === String(id)) || bulgularData.find(b => String(b.id) === String(id));
             if (bulgu) {
-                modalContainer.innerHTML = getBulguViewModalHTML(bulgu);
+                // YENİ: Pencereyi açmadan önce ekleri çek
+                const attachments = await apiRequest(`/api/bulgu/${id}/attachments`);
+                modalContainer.innerHTML = getBulguViewModalHTML(bulgu, attachments); // Ekleri HTML'e gönder
                 document.querySelectorAll('[data-close-bulgu-view]').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
             }
         });
     });
 
     document.querySelectorAll('.edit-bulgu-btn').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => { // async eklendi
             const bulguId = button.dataset.bulguId;
             const bulguToEdit = bulgular.find(b => b.id == bulguId) || bulgularData.find(b => b.id == bulguId);
             if (bulguToEdit) {
-                modalContainer.innerHTML = getBulguModalHTML(vendorsData, modelsData, versionsData, bulguToEdit);
-                attachBulguModalListeners(bulguToEdit);
+                // YENİ: Pencereyi açmadan önce ekleri çek
+                const attachments = await apiRequest(`/api/bulgu/${bulguId}/attachments`);
+                modalContainer.innerHTML = getBulguModalHTML(vendorsData, modelsData, versionsData, bulguToEdit, attachments);
+                attachBulguModalListeners(bulguToEdit, attachments); // Ekleri olay dinleyiciye de gönder
             }
         });
     });
