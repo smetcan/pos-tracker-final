@@ -4,6 +4,14 @@ const fs = require('fs');
 const db = require('../config/db');
 const router = express.Router();
 
+// --- YARDIMCI FONKSİYON: Geçmiş kaydı oluşturur (bulgular.js'den kopyalanabilir veya ortak bir dosyaya alınabilir) ---
+async function logHistory(bulguId, req, action, details = '') {
+    const userId = req.session.user.id;
+    const userName = req.session.user.userName;
+    const sql = `INSERT INTO history (bulguId, userId, userName, action, details) VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [bulguId, userId, userName, action, details]);
+}
+
 // Dosya Yükleme (Multer) Ayarları
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
