@@ -16,7 +16,15 @@ router.post('/login', (req, res) => {
         const match = await bcrypt.compare(password, user.password);
         if (match) {
             req.session.user = { id: user.id, userName: user.userName, name: user.name, surname: user.surname };
-            res.status(200).json({ message: 'Giriş başarılı.', user: req.session.user });
+            
+            // --- GÜNCELLEME: Session'ın kaydedildiğinden emin ol ---
+            req.session.save((err) => {
+                if (err) {
+                    return res.status(500).json({ error: 'Oturum kaydedilirken bir hata oluştu.' });
+                }
+                res.status(200).json({ message: 'Giriş başarılı.', user: req.session.user });
+            });
+
         } else {
             res.status(401).json({ error: 'Geçersiz kullanıcı adı veya şifre.' });
         }

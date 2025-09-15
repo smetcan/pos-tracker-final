@@ -40,3 +40,5 @@ let bulguFilters = {
     tip: 'all',
     currentPage: 1
 };
+
+let currentUser = null;

@@ -409,6 +409,9 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = 
     const isEdit = bulgu.id !== undefined;
     const title = isEdit ? 'Bulgu/Talep Düzenle' : 'Yeni Bulgu/Talep Ekle';
     
+    // --- GÜNCELLEME 1: "Giren Kullanıcı" adını, yeni bulgu ise mevcut kullanıcıdan al, değilse mevcut kayıttan al ---
+    const girenKullaniciAdi = !isEdit && currentUser ? `${currentUser.name} ${currentUser.surname}` : (bulgu.girenKullanici || '');
+
     const selectedVendorId = bulgu.vendorId || '';
     const selectedModelIds = (bulgu.modelIds && typeof bulgu.modelIds === 'string') ? bulgu.modelIds.split(',').map(s => s.trim()) : (bulgu.modelIds || []);
     const selectedCozumVersiyonId = bulgu.cozumVersiyonId || '';
@@ -496,13 +499,15 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = 
                             </div>
                              <div>
                                 <label for="bulgu-giren-kullanici" class="block text-sm font-medium text-gray-700">Giren Kullanıcı</label>
-                                <input type="text" id="bulgu-giren-kullanici" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.girenKullanici || ''}">
+                                <input type="text" id="bulgu-giren-kullanici" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" 
+                                       value="${girenKullaniciAdi}" readonly>
                             </div>
                         </div>
                         <div id="onay-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 ${bulgu.status === 'Kapalı' ? '' : 'hidden'}">
                             <div>
                                 <label for="bulgu-cozum-onaylayan-kullanici" class="block text-sm font-medium text-gray-700">Çözüm Onaylayan Kullanıcı</label>
-                                <input type="text" id="bulgu-cozum-onaylayan-kullanici" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.cozumOnaylayanKullanici || ''}">
+                                <input type="text" id="bulgu-cozum-onaylayan-kullanici" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" 
+                                       value="${bulgu.cozumOnaylayanKullanici || ''}" readonly>
                             </div>
                             <div>
                                 <label for="bulgu-cozum-onay-tarihi" class="block text-sm font-medium text-gray-700">Çözüm Onay Tarihi</label>
