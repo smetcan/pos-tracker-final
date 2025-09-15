@@ -1,0 +1,708 @@
+    function showErrorModal(message) {
+    modalContainer.innerHTML = `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all text-center">
+                <div class="p-6">
+                    <svg class="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <h3 class="text-lg font-semibold text-red-600">Bir Hata Oluştu</h3>
+                    <p class="mt-2 text-sm text-gray-600">${message}</p>
+                </div>
+                <div class="flex items-center justify-center p-4 border-t rounded-b-md bg-gray-50">
+                    <button id="close-error-modal" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-medium">Kapat</button>
+                </div>
+            </div>
+        </div>`;
+    document.getElementById('close-error-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');
+}
+
+    function getVendorModalHTML(vendor = {}, contacts = []) {
+    const isEdit = vendor.id !== undefined;
+    const title = isEdit ? 'Vendor Düzenle' : 'Yeni Vendor Ekle';
+    
+    // Sadece düzenleme modundaysa iletişim kişileri HTML'ini oluştur
+    const contactsSectionHTML = isEdit ? `
+        <div class="mt-6">
+            <div class="flex justify-between items-center mb-2">
+                <h4 class="font-semibold text-gray-800">İletişim Kişileri</h4>
+                <button id="add-new-contact-btn" class="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-md hover:bg-blue-200">Yeni Ekle</button>
+            </div>
+            <div id="vendor-contacts-container" class="border rounded-md bg-gray-50 max-h-48 overflow-y-auto">
+                ${contacts.length > 0 ? contacts.map(contact => `
+                    <div class="flex justify-between items-center p-2 border-t">
+                        <div>
+                            <p class="font-medium text-sm">${contact.name} ${contact.preferred ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Birincil</span>' : ''}</p>
+                            <p class="text-xs text-gray-500">${contact.email || ''} ${contact.phone || ''}</p>
+                        </div>
+                        <div>
+                            <button class="edit-contact-btn text-blue-600 hover:underline text-sm mr-2" data-contact-id="${contact.id}">Düzenle</button>
+                            <button class="delete-contact-btn text-red-600 hover:underline text-sm" data-contact-id="${contact.id}">Sil</button>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-sm text-gray-500 p-3 border-t text-center">İletişim kişisi bulunmuyor.</p>'}
+            </div>
+        </div>
+    ` : '';
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto">
+                    <form id="vendor-form" class="space-y-4">
+                        <input type="hidden" id="vendor-id" value="${vendor.id || ''}">
+                        <div class="grid grid-cols-2 gap-x-6">
+                            <div>
+                                <label for="vendor-name" class="block text-sm font-medium">Vendor Adı</label>
+                                <input type="text" id="vendor-name" value="${vendor.name || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="vendor-make-code" class="block text-sm font-medium">Vendor Kodu</label>
+                                <input type="text" id="vendor-make-code" value="${vendor.makeCode || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                        </div>
+                    </form>
+                    ${contactsSectionHTML}
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="vendor-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getUserModalHTML(user = {}) {
+    const isEdit = user.id !== undefined; // Bu şu an için kullanılmıyor ama gelecek için iyi.
+    const title = 'Yeni Kullanıcı Ekle';
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto">
+                    <form id="user-form" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-x-6">
+                            <div>
+                                <label for="user-name" class="block text-sm font-medium">İsim</label>
+                                <input type="text" id="user-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="user-surname" class="block text-sm font-medium">Soyisim</label>
+                                <input type="text" id="user-surname" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="user-userName" class="block text-sm font-medium">Kullanıcı Adı</label>
+                                <input type="text" id="user-userName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label for="user-email" class="block text-sm font-medium">E-posta</label>
+                                <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="user-password" class="block text-sm font-medium">Şifre</label>
+                                <input type="password" id="user-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="user-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Kullanıcı Oluştur</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getResetPasswordModalHTML(userName) {
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Şifre Sıfırla</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="reset-password-form" class="space-y-4">
+                        <p class="text-sm text-center"><strong>${userName}</strong> kullanıcısı için yeni bir şifre belirleyin.</p>
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium">Yeni Şifre</label>
+                            <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="reset-password-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Şifreyi Güncelle</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getChangePasswordModalHTML() {
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Şifre Değiştir</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="change-password-form" class="space-y-4">
+                        <div>
+                            <label for="old-password" class="block text-sm font-medium">Mevcut Şifre</label>
+                            <input type="password" id="old-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium">Yeni Şifre</label>
+                            <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="change-password-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Şifreyi Güncelle</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+    function getContactSubModalHTML(vendor, contact = {}) {
+    const isEdit = contact.id !== undefined;
+    const title = isEdit ? 'Kişi Düzenle' : 'Yeni Kişi Ekle';
+    
+    return `
+        <div id="contact-sub-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col">
+
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-lg font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-contact-sub-modal absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <form id="contact-form" class="space-y-4">
+                        <input type="hidden" id="contact-id" value="${contact.id || ''}">
+                        <input type="hidden" id="contact-vendor-id" value="${vendor.id}">
+                        <div>
+                            <label for="contact-name" class="block text-sm font-medium">İsim</label>
+                            <input type="text" id="contact-name" value="${contact.name || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="contact-email" class="block text-sm font-medium">E-posta</label>
+                            <input type="email" id="contact-email" value="${contact.email || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="contact-phone" class="block text-sm font-medium">Telefon</label>
+                            <input type="tel" id="contact-phone" value="${contact.phone || ''}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div class="pt-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="contact-preferred" class="h-4 w-4 rounded border-gray-300" ${contact.preferred ? 'checked' : ''}>
+                                <label for="contact-preferred" class="ml-2 block text-sm">Birincil iletişim kişisi yap</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-contact-sub-modal px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="contact-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Güncelle' : 'Ekle'}</button>
+                </div>
+
+            </div>
+        </div>`;
+}
+
+    function getModelModalHTML(vendors, model = {}) {
+    const isEdit = model.id !== undefined;
+    const title = isEdit ? 'Model Düzenle' : 'Yeni Model Ekle';
+    const vendorOptions = vendors.map(v => `<option value="${v.id}" ${model.vendorId == v.id ? 'selected' : ''}>${v.name}</option>`).join('');
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all flex flex-col max-h-full">
+                
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto">
+                    <form id="model-form" class="space-y-4">
+                        <input type="hidden" id="model-id" value="${model.id || ''}">
+                        <div>
+                            <label for="model-name" class="block text-sm font-medium text-gray-700">Model Adı</label>
+                            <input type="text" id="model-name" name="name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${model.name || ''}" required>
+                        </div>
+                        <div>
+                            <label for="model-code" class="block text-sm font-medium text-gray-700">Model Kodu</label>
+                            <input type="text" id="model-code" name="code" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${model.code || ''}" required>
+                        </div>
+                        <div>
+                            <label for="model-vendor-id" class="block text-sm font-medium text-gray-700">Vendor</label>
+                            <select id="model-vendor-id" name="vendorId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+                                <option value="">Seçiniz...</option>
+                                ${vendorOptions}
+                            </select>
+                        </div>
+                        <div class="space-y-2 pt-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="model-is-techpos" name="isTechpos" class="h-4 w-4 rounded border-gray-300" ${model.isTechpos ? 'checked' : ''}>
+                                <label for="model-is-techpos" class="ml-2 block text-sm text-gray-900">TechPOS mu?</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="model-is-android-pos" name="isAndroidPos" class="h-4 w-4 rounded border-gray-300" ${model.isAndroidPos ? 'checked' : ''}>
+                                <label for="model-is-android-pos" class="ml-2 block text-sm text-gray-900">Android POS mu?</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="model-is-okc-pos" name="isOkcPos" class="h-4 w-4 rounded border-gray-300" ${model.isOkcPos ? 'checked' : ''}>
+                                <label for="model-is-okc-pos" class="ml-2 block text-sm text-gray-900">ÖKC POS mu?</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="model-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+    function getBulguViewModalHTML(bulgu, attachments = []) {
+    const vendorName = vendorsData.find(v => v.id == bulgu.vendorId)?.name || '';
+    const versionName = versionsData.find(v => v.id == bulgu.cozumVersiyonId)?.versionNumber || '';
+    let affectedModelsArray = [];
+    if (bulgu.modelIds) {
+        const ids = (typeof bulgu.modelIds === 'string') ? bulgu.modelIds.split(',').map(s => s.trim()) : bulgu.modelIds;
+        affectedModelsArray = ids.map(id => modelsData.find(m => String(m.id) === String(id))?.name).filter(Boolean);
+    }
+    const modelsHtml = affectedModelsArray.length > 0 ? affectedModelsArray.map(m => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${m}</span>`).join('') : '-';
+
+    // YENİ: Eklenti listesi için HTML oluştur
+    const attachmentsHtml = attachments.length > 0 ? attachments.map(att => `
+        <a href="/${att.filePath}" target="_blank" class="text-sm text-blue-600 hover:underline flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+            ${att.originalName}
+        </a>
+    `).join('') : '<p class="text-sm text-gray-500">Ekli dosya bulunmuyor.</p>';
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Bulgu Detayları: #${bulgu.id}</h3>
+                    <button type="button" data-close-bulgu-view class="absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-4">
+                    <h4 class="text-lg font-medium text-gray-900">${bulgu.baslik}</h4>
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
+                        <div><strong>Vendor:</strong> ${vendorName}</div>
+                        <div><strong>Bulgu Tipi:</strong> ${bulgu.bulguTipi}</div>
+                        <div><strong>Etki Seviyesi:</strong> ${bulgu.etkiSeviyesi}</div>
+                        <div><strong>Tespit Tarihi:</strong> ${bulgu.tespitTarihi}</div>
+                        <div><strong>Durum:</strong> ${bulgu.status}</div>
+                        <div><strong>Çözüm Versiyon:</strong> ${versionName || '-'}</div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Etkilenen Modeller:</strong>
+                        <div class="mt-2">${modelsHtml}</div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Detaylı Açıklama:</strong>
+                        <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${bulgu.detayliAciklama || '-'}</p>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Ekli Dosyalar:</strong>
+                        <div class="mt-2 p-3 bg-gray-50 border rounded-md space-y-2">
+                            ${attachmentsHtml}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
+                    <button type="button" data-close-bulgu-view class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+    function getVersionViewModalHTML(version) {
+    const modelsHtml = version.models
+        ? version.models.split(',').map(m => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${m.trim()}</span>`).join('')
+        : '-';
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Versiyon Detayları: ${version.versionNumber}</h3>
+                    <button type="button" class="close-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-4">
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
+                        <div><strong>Vendor:</strong> ${version.vendorName}</div>
+                        <div><strong>Teslim Tarihi:</strong> ${version.deliveryDate || '-'}</div>
+                        <div><strong>Durum:</strong> <span class="px-2 py-1 text-xs font-medium rounded-full ${version.status === 'Prod' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${version.status}</span></div>
+                        <div><strong>Prod Onay Tarihi:</strong> ${version.prodOnayDate || '-'}</div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Geçerli Modeller:</strong>
+                        <div class="mt-2">${modelsHtml}</div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Bug/İstek Tarihçesi:</strong>
+                        <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${version.bugIstekTarihcesi || '-'}</p>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Ekler:</strong>
+                        <p class="mt-2 p-3 bg-gray-50 border rounded-md whitespace-pre-wrap text-sm">${version.ekler || '-'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
+                    <button type="button" class="close-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = []) {
+    const isEdit = bulgu.id !== undefined;
+    const title = isEdit ? 'Bulgu/Talep Düzenle' : 'Yeni Bulgu/Talep Ekle';
+    
+    const selectedVendorId = bulgu.vendorId || '';
+    const selectedModelIds = (bulgu.modelIds && typeof bulgu.modelIds === 'string') ? bulgu.modelIds.split(',').map(s => s.trim()) : (bulgu.modelIds || []);
+    const selectedCozumVersiyonId = bulgu.cozumVersiyonId || '';
+
+    const vendorOptions = vendors.map(v => `<option value="${v.id}" ${selectedVendorId == v.id ? 'selected' : ''}>${v.name}</option>`).join('');
+    
+    const filteredVersions = isEdit ? versions.filter(v => v.vendorId == selectedVendorId) : [];
+    const versionOptions = filteredVersions.map(v => `<option value="${v.id}" ${selectedCozumVersiyonId == v.id ? 'selected' : ''}>${v.versionNumber}</option>`).join('');
+
+    const statusOptions = ['Açık', 'Test Edilecek', 'Kapalı'].map(s => `<option value="${s}" ${bulgu.status === s ? 'selected' : ''}>${s}</option>`).join('');
+    const bulguTipiOptions = ['Program Hatası', 'Yeni Talep'].map(t => `<option value="${t}" ${bulgu.bulguTipi === t ? 'selected' : ''}>${t}</option>`).join('');
+    const etkiSeviyesiOptions = ['Düşük', 'Orta', 'Yüksek'].map(e => `<option value="${e}" ${bulgu.etkiSeviyesi === e ? 'selected' : ''}>${e}</option>`).join('');
+
+    const filteredModels = isEdit ? models.filter(m => m.vendorId == selectedVendorId) : [];
+    const modelCheckboxesHTML = filteredModels.map(m => `
+        <div class="flex items-center">
+            <input type="checkbox" id="model-${m.id}" value="${m.id}" class="h-4 w-4 rounded border-gray-300 model-checkbox" ${selectedModelIds.includes(String(m.id)) ? 'checked' : ''}>
+            <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+        </div>
+    `).join('');
+
+    const attachmentsHtml = attachments.map(att => `
+        <div class="flex items-center justify-between text-sm py-1" id="attachment-${att.id}">
+            <a href="/${att.filePath.replace(/\\/g, '/')}" target="_blank" class="text-blue-600 hover:underline truncate pr-2 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                ${att.originalName}
+            </a>
+            <button type="button" class="delete-attachment-btn text-red-500 hover:text-red-700 p-1 flex-shrink-0" data-attachment-id="${att.id}">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+            </button>
+        </div>
+    `).join('');
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-3xl transform transition-all flex flex-col max-h-full">
+                
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto">
+                    <form id="bulgu-form" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                            <div>
+                                <label for="bulgu-baslik" class="block text-sm font-medium text-gray-700">Başlık</label>
+                                <input type="text" id="bulgu-baslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.baslik || ''}" required>
+                            </div>
+                            <div>
+                                <label for="bulgu-vendor-id" class="block text-sm font-medium text-gray-700">Vendor</label>
+                                <select id="bulgu-vendor-id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+                                    <option value="">Seçiniz...</option>
+                                    ${vendorOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="bulgu-tipi" class="block text-sm font-medium text-gray-700">Bulgu Tipi</label>
+                                <select id="bulgu-tipi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>${bulguTipiOptions}</select>
+                            </div>
+                            <div>
+                                <label for="bulgu-etki-seviyesi" class="block text-sm font-medium text-gray-700">Etki Seviyesi</label>
+                                <select id="bulgu-etki-seviyesi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>${etkiSeviyesiOptions}</select>
+                            </div>
+                             <div>
+                                <label for="bulgu-tespit-tarihi" class="block text-sm font-medium text-gray-700">Tespit Tarihi</label>
+                                <input type="date" id="bulgu-tespit-tarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.tespitTarihi || ''}" required>
+                            </div>
+                            <div>
+                                <label for="bulgu-status" class="block text-sm font-medium text-gray-700">Durum</label>
+                                <select id="bulgu-status" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" ${!isEdit ? 'disabled' : ''}>${statusOptions}</select>
+                            </div>
+                             <div>
+                                <label for="bulgu-cozum-versiyon-id" class="block text-sm font-medium text-gray-700">Çözüm Beklenen Versiyon</label>
+                                <select id="bulgu-cozum-versiyon-id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                    <option value="">Önce vendor seçin...</option>
+                                    ${versionOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="bulgu-vendor-tracker-no" class="block text-sm font-medium text-gray-700">Vendor Takip No</label>
+                                <input type="text" id="bulgu-vendor-tracker-no" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.vendorTrackerNo || ''}">
+                            </div>
+                             <div>
+                                <label for="bulgu-giren-kullanici" class="block text-sm font-medium text-gray-700">Giren Kullanıcı</label>
+                                <input type="text" id="bulgu-giren-kullanici" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.girenKullanici || ''}">
+                            </div>
+                        </div>
+                        <div id="onay-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 ${bulgu.status === 'Kapalı' ? '' : 'hidden'}">
+                            <div>
+                                <label for="bulgu-cozum-onaylayan-kullanici" class="block text-sm font-medium text-gray-700">Çözüm Onaylayan Kullanıcı</label>
+                                <input type="text" id="bulgu-cozum-onaylayan-kullanici" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.cozumOnaylayanKullanici || ''}">
+                            </div>
+                            <div>
+                                <label for="bulgu-cozum-onay-tarihi" class="block text-sm font-medium text-gray-700">Çözüm Onay Tarihi</label>
+                                <input type="date" id="bulgu-cozum-onay-tarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" value="${bulgu.cozumOnayTarihi || ''}">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Etkilenen Modeller</label>
+                            <div class="mt-1 border rounded-md p-2">
+                                 <div class="flex items-center border-b pb-2 mb-2">
+                                    <input type="checkbox" id="select-all-models" class="h-4 w-4 rounded border-gray-300">
+                                    <label for="select-all-models" class="ml-2 block text-sm font-medium text-gray-900">Hepsini Seç / Bırak</label>
+                                </div>
+                                <div id="bulgu-models-container" class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                                    ${isEdit ? modelCheckboxesHTML : '<p class="text-xs text-gray-500 col-span-full">Modelleri görmek için bir vendor seçin.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="bulgu-detayli-aciklama" class="block text-sm font-medium text-gray-700">Detaylı Açıklama</label>
+                            <textarea id="bulgu-detayli-aciklama" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">${bulgu.detayliAciklama || ''}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">${isEdit ? 'Ekli Dosyalar' : 'Dosya Ekle'}</label>
+                            ${isEdit ? `
+                            <div id="attachments-list" class="mt-1 border rounded-md p-2 bg-gray-50 max-h-32 overflow-y-auto">
+                                ${attachments.length > 0 ? attachmentsHtml : '<p class="text-xs text-gray-500 text-center py-2">Ekli dosya yok.</p>'}
+                            </div>
+                            ` : ''}
+                            <div class="mt-2">
+                                ${isEdit ? `<label for="bulgu-attachments" class="block text-sm font-medium text-gray-700 mb-1">Yeni Dosya Yükle</label>` : ''}
+                                <input type="file" id="bulgu-attachments" name="attachments" multiple class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="bulgu-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+    function getVendorContactsModalHTML(vendor, contacts = []) {
+    const copyIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${vendor.name} İletişim Kişileri</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto">
+                    ${contacts.length > 0 ? contacts.map(contact => `
+                        <div class="flex justify-between items-center py-2 border-b last:border-none">
+                            <div>
+                                <p class="font-medium">${contact.name} ${contact.preferred ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Birincil</span>' : ''}</p>
+                                <p class="text-sm text-gray-600">${contact.email || ''} ${contact.phone ? `(${contact.phone})` : ''}</p>
+                            </div>
+                            ${contact.email ? `
+                            <div>
+                                <button title="E-postayı kopyala" class="copy-email-btn text-gray-500 hover:text-blue-600 p-1" data-email="${contact.email}">
+                                    ${copyIconSvg}
+                                </button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `).join('') : '<p class="text-sm text-gray-500 text-center">Henüz iletişim kişisi eklenmedi.</p>'}
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">Kapat</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+    function getDeleteConfirmModalHTML(message, subMessage = '') {
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all text-center">
+                <div class="p-6">
+                    <svg class="mx-auto mb-4 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h3 class="text-lg font-semibold text-gray-800">Emin misiniz?</h3>
+                    <p class="mt-2 text-sm text-gray-600">${message}</p>
+                    ${subMessage ? `<p class="mt-1 text-xs text-gray-500">${subMessage}</p>` : ''}
+                </div>
+                <div class="flex items-center justify-center p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button id="cancel-delete" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium">Evet, Sil</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+    function getBulguImportModalHTML() {
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col max-h-full">
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">Bulgu İçeri Aktar</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="bulgu-import-form" class="space-y-4">
+                        <div>
+                            <label for="csv-file-input" class="block text-sm font-medium text-gray-700">CSV Dosyası Seçin</label>
+                            <input type="file" id="csv-file-input" accept=".csv" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+                        </div>
+                        <div id="import-progress" class="hidden text-sm text-gray-600">
+                            <p>Yükleniyor... <span id="progress-count">0</span>/<span id="total-records">0</span></p>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div id="import-results" class="hidden p-3 border rounded-md bg-gray-50 max-h-40 overflow-y-auto text-sm"></div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="bulgu-import-form" id="start-import-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">İçeri Aktar</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function getVersionModalHTML(vendors, models, version = {}) {
+    const isEdit = version.id !== undefined;
+    const title = isEdit ? 'Versiyon Düzenle' : 'Yeni Versiyon Ekle';
+    const vendorOptions = vendors.map(v => `<option value="${v.id}" ${version.vendorId == v.id ? 'selected' : ''}>${v.name}</option>`).join('');
+    
+    const selectedModelIds = (version.modelIds && typeof version.modelIds === 'string') 
+        ? version.modelIds.split(',').map(s => s.trim()) 
+        : (version.modelIds || []);
+
+    const filteredModels = isEdit ? models.filter(m => m.vendorId == version.vendorId) : [];
+
+    const modelCheckboxesHTML = filteredModels.map(m => `
+        <div class="flex items-center">
+            <input type="checkbox" id="model-${m.id}" value="${m.id}" name="modelIds" class="h-4 w-4 rounded border-gray-300 model-checkbox" ${selectedModelIds.includes(String(m.id)) ? 'checked' : ''}>
+            <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+        </div>
+    `).join('');
+
+    const statusOptions = ['Test', 'Prod'].map(s => `<option value="${s}" ${version.status === s ? 'selected' : ''}>${s}</option>`).join('');
+
+    return `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all flex flex-col max-h-full">
+                
+                <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                    <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                    <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto">
+                    <form id="version-form" class="space-y-6">
+                        <input type="hidden" id="version-id" value="${version.id || ''}">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                            <div>
+                                <label for="version-number" class="block text-sm font-medium text-gray-700">Versiyon Numarası</label>
+                                <input type="text" id="version-number" name="versionNumber" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" value="${version.versionNumber || ''}" required>
+                            </div>
+                            <div>
+                                <label for="version-vendor-id" class="block text-sm font-medium text-gray-700">Vendor</label>
+                                <select id="version-vendor-id" name="vendorId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                                    <option value="">Seçiniz...</option>
+                                    ${vendorOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="version-delivery-date" class="block text-sm font-medium text-gray-700">Teslim Tarihi</label>
+                                <input type="date" id="version-delivery-date" name="deliveryDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" value="${version.deliveryDate || ''}" required>
+                            </div>
+                             <div>
+                                <label for="version-status" class="block text-sm font-medium text-gray-700">Durum</label>
+                                <select id="version-status" name="status" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" ${!isEdit ? 'disabled' : ''}>${statusOptions}</select>
+                            </div>
+                            <div>
+                                <label for="version-prod-onay-date" class="block text-sm font-medium text-gray-700">Prod Onay Tarihi</label>
+                                <input type="date" id="version-prod-onay-date" name="prodOnayDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" value="${version.prodOnayDate || ''}" ${version.status !== 'Prod' ? 'disabled' : ''}>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Geçerli Modeller</label>
+                            <div class="mt-1 border rounded-md p-2">
+                                 <div class="flex items-center border-b pb-2 mb-2">
+                                    <input type="checkbox" id="select-all-models" class="h-4 w-4 rounded border-gray-300">
+                                    <label for="select-all-models" class="ml-2 block text-sm font-medium text-gray-900">Hepsini Seç / Bırak</label>
+                                </div>
+                                <div id="version-models-container" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                                    ${modelCheckboxesHTML || '<p class="text-xs text-gray-500 col-span-2">Modelleri görmek için bir vendor seçin.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="version-bug-istek-tarihcesi" class="block text-sm font-medium text-gray-700">Bug/İstek Tarihçesi</label>
+                            <textarea id="version-bug-istek-tarihcesi" name="bugIstekTarihcesi" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${version.bugIstekTarihcesi || ''}</textarea>
+                        </div>
+                        <div>
+                            <label for="version-ekler" class="block text-sm font-medium text-gray-700">Ekler</label>
+                            <textarea id="version-ekler" name="ekler" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${version.ekler || ''}</textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                    <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                    <button type="submit" form="version-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
+                </div>
+            </div>
+        </div>`;
+}
