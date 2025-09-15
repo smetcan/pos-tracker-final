@@ -288,7 +288,7 @@ function getChangePasswordModalHTML() {
         </div>`;
 }
 
-    function getBulguViewModalHTML(bulgu, attachments = []) {
+    function getBulguViewModalHTML(bulgu, attachments = [], history = []) {
     const vendorName = vendorsData.find(v => v.id == bulgu.vendorId)?.name || '';
     const versionName = versionsData.find(v => v.id == bulgu.cozumVersiyonId)?.versionNumber || '';
     let affectedModelsArray = [];
@@ -298,13 +298,24 @@ function getChangePasswordModalHTML() {
     }
     const modelsHtml = affectedModelsArray.length > 0 ? affectedModelsArray.map(m => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${m}</span>`).join('') : '-';
 
-    // YENİ: Eklenti listesi için HTML oluştur
     const attachmentsHtml = attachments.length > 0 ? attachments.map(att => `
         <a href="/${att.filePath}" target="_blank" class="text-sm text-blue-600 hover:underline flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
             ${att.originalName}
         </a>
     `).join('') : '<p class="text-sm text-gray-500">Ekli dosya bulunmuyor.</p>';
+
+    const hasHistory = Array.isArray(history) && history.length > 0;
+    const historyHtml = hasHistory ? history.map(h => {
+        const date = new Date(h.timestamp).toLocaleString('tr-TR');
+        return `
+            <div class="py-2 border-b last:border-none">
+                <p class="text-sm"><strong class="font-medium">${h.userName}</strong> - <span class="text-gray-600">${h.action}</span></p>
+                ${h.details ? `<p class="text-xs text-gray-500 mt-1 pl-2 border-l-2">${h.details}</p>` : ''}
+                <p class="text-xs text-gray-400 text-right">${date}</p>
+            </div>
+        `;
+    }).join('') : '<p class="text-sm text-gray-500 text-center py-2">Bu bulgu için bir geçmiş kaydı bulunmuyor.</p>';
 
     return `
         <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
@@ -337,6 +348,12 @@ function getChangePasswordModalHTML() {
                         <strong class="text-sm font-medium">Ekli Dosyalar:</strong>
                         <div class="mt-2 p-3 bg-gray-50 border rounded-md space-y-2">
                             ${attachmentsHtml}
+                        </div>
+                    </div>
+                    <div>
+                        <strong class="text-sm font-medium">Değişiklik Geçmişi:</strong>
+                        <div class="mt-2 p-3 bg-gray-50 border rounded-md max-h-48 overflow-y-auto">
+                            ${historyHtml}
                         </div>
                     </div>
                 </div>

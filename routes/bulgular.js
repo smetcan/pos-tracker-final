@@ -2,6 +2,35 @@ const express = require('express');
 const db = require('../config/db');
 const router = express.Router();
 
+// --- YARDIMCI FONKSİYON: Geçmiş kaydı oluşturur ---
+function logHistory(bulguId, req, action, details = '') {
+    return new Promise((resolve, reject) => {
+        const userId = req.session.user.id;
+        const userName = req.session.user.userName;
+        const sql = `INSERT INTO history (bulguId, userId, userName, action, details) VALUES (?, ?, ?, ?, ?)`;
+        db.run(sql, [bulguId, userId, userName, action, details], function(err) {
+            if (err) {
+                console.error('History log error:', err);
+                return reject(err);
+            }
+            resolve(this);
+        });
+    });
+}
+
+// --- YENİ API: Bir bulgunun geçmişini getirir ---
+// --- YENİ API: Bir bulgunun geçmişini getirir ---
+router.get('/bulgu/:id/history', (req, res) => {
+    const { id } = req.params;
+    const sql = `SELECT * FROM history WHERE bulguId = ? ORDER BY timestamp DESC`;
+    db.all(sql, [id], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: "Geçmiş verileri alınırken bir hata oluştu." });
+        }
+        res.json(rows);
+    });
+});
+
 router.get('/bulgular', (req, res) => {
     const { vendorId, status, tip, searchTerm, page = 1, limit = 100 } = req.query;
     const offset = (page - 1) * limit;
@@ -97,71 +126,58 @@ router.post('/bulgular', (req, res) => {
     });
 });
 
-router.put('/bulgular/:id', (req, res) => {
+router.put('/bulgular/:id', async (req, res) => {
     const { id } = req.params;
-    const { baslik, modelIds, cozumVersiyonId, bulguTipi, etkiSeviyesi, tespitTarihi, status, detayliAciklama, girenKullanici, vendorTrackerNo, cozumOnaylayanKullanici, cozumOnayTarihi, vendorId } = req.body;
-    if (!baslik || !bulguTipi || !etkiSeviyesi || !tespitTarihi || !status || !vendorId) return res.status(400).json({ error: 'Gerekli alanlar boş bırakılamaz.' });
-    
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION', (err) => {
-            if (err) return res.status(500).json({ error: "Transaction başlatılamadı." });
-            
-            const bulguSql = `
-                UPDATE Bulgu SET baslik = ?, bulguTipi = ?, etkiSeviyesi = ?, tespitTarihi = ?, status = ?,
-                    detayliAciklama = ?, girenKullanici = ?, vendorTrackerNo = ?,
-                    cozumOnaylayanKullanici = ?, cozumOnayTarihi = ?, cozumVersiyonId = ?, vendorId = ?
-                WHERE id = ?`;
-            const bulguParams = [baslik, bulguTipi, etkiSeviyesi, tespitTarihi, status, detayliAciklama, girenKullanici, vendorTrackerNo, cozumOnaylayanKullanici, cozumOnayTarihi, cozumVersiyonId ? Number(cozumVersiyonId) : null, vendorId, id];
-            
-            db.run(bulguSql, bulguParams, function(err) {
-                if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: "Bulgu güncellenirken hata oluştu." });
-                }
-                
-                db.run('DELETE FROM BulguModel WHERE bulguId = ?', [id], (err) => {
-                    if (err) {
-                        db.run('ROLLBACK');
-                        return res.status(500).json({ error: "Model bağlantıları silinirken hata oluştu." });
-                    }
-                    
-                    if (!modelIds || modelIds.length === 0) {
-                        db.run('COMMIT', (err) => {
-                            if (err) {
-                                db.run('ROLLBACK');
-                                return res.status(500).json({ error: "Transaction commit edilemedi." });
-                            }
-                            res.json({ message: "Bulgu başarıyla güncellendi." });
-                        });
-                        return;
-                    }
-                    
-                    const promises = modelIds.map(modelId => {
-                        return new Promise((resolve, reject) => {
-                            db.run('INSERT INTO BulguModel (bulguId, modelId) VALUES (?, ?)', [id, modelId], (err) => {
-                                if (err) reject(err); else resolve();
-                            });
-                        });
-                    });
-                    
-                    Promise.all(promises)
-                        .then(() => {
-                            db.run('COMMIT', (err) => {
-                                if (err) {
-                                    db.run('ROLLBACK');
-                                    return res.status(500).json({ error: "Transaction commit edilemedi." });
-                                }
-                                res.json({ message: "Bulgu başarıyla güncellendi." });
-                            });
-                        })
-                        .catch(err => {
-                            db.run('ROLLBACK');
-                            res.status(500).json({ error: "Model bağlantıları eklenirken hata oluştu." });
-                        });
+    const newData = req.body;
+
+    try {
+        // 1. Mevcut veriyi al
+        const oldBulgu = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM Bulgu WHERE id = ?', [id], (err, row) => err ? reject(err) : resolve(row));
+        });
+        if (!oldBulgu) return res.status(404).json({ error: "Güncellenecek bulgu bulunamadı." });
+
+        // 2. Veritabanı işlemini başlat
+        await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', err => err ? reject(err) : resolve()));
+
+        // 3. Ana Bulgu tablosunu güncelle
+        const bulguSql = `
+            UPDATE Bulgu SET baslik = ?, bulguTipi = ?, etkiSeviyesi = ?, tespitTarihi = ?, status = ?,
+                detayliAciklama = ?, girenKullanici = ?, vendorTrackerNo = ?,
+                cozumOnaylayanKullanici = ?, cozumOnayTarihi = ?, cozumVersiyonId = ?, vendorId = ?
+            WHERE id = ?`;
+        const bulguParams = [newData.baslik, newData.bulguTipi, newData.etkiSeviyesi, newData.tespitTarihi, newData.status, newData.detayliAciklama, newData.girenKullanici, newData.vendorTrackerNo, newData.cozumOnaylayanKullanici, newData.cozumOnayTarihi, newData.cozumVersiyonId ? Number(newData.cozumVersiyonId) : null, newData.vendorId, id];
+        await new Promise((resolve, reject) => db.run(bulguSql, bulguParams, err => err ? reject(err) : resolve()));
+
+        // 4. Değişiklikleri kontrol et ve geçmişe logla
+        if (oldBulgu.status !== newData.status) {
+            await logHistory(id, req, 'Durum Değiştirildi', `Durum '${oldBulgu.status}' iken '${newData.status}' olarak değiştirildi.`);
+        }
+        if (oldBulgu.baslik !== newData.baslik) {
+            await logHistory(id, req, 'Alan Güncellendi', `Başlık değiştirildi.`);
+        }
+        // Diğer alanlar için kontroller buraya eklenebilir
+
+        // 5. Model bağlantılarını güncelle
+        await new Promise((resolve, reject) => db.run('DELETE FROM BulguModel WHERE bulguId = ?', [id], err => err ? reject(err) : resolve()));
+        if (newData.modelIds && newData.modelIds.length > 0) {
+            const insertPromises = newData.modelIds.map(modelId => {
+                return new Promise((resolve, reject) => {
+                    db.run('INSERT INTO BulguModel (bulguId, modelId) VALUES (?, ?)', [id, modelId], (err) => err ? reject(err) : resolve());
                 });
             });
-        });
-    });
+            await Promise.all(insertPromises);
+        }
+
+        // 6. İşlemi onayla
+        await new Promise((resolve, reject) => db.run('COMMIT', err => err ? reject(err) : resolve()));
+        res.json({ message: "Bulgu başarıyla güncellendi." });
+
+    } catch (error) {
+        // Hata durumunda işlemi geri al
+        await new Promise((resolve, reject) => db.run('ROLLBACK', err => err ? reject(err) : resolve()));
+        res.status(500).json({ error: "Bulgu güncellenirken bir hata oluştu: " + error.message });
+    }
 });
 
 router.delete('/bulgular/:id', (req, res) => {

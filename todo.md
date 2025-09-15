@@ -102,6 +102,31 @@ Bu bölüm, uygulamaya e-posta gerektirmeyen, kontrollü bir kullanıcı doğrul
   - `index.html`'e "Çıkış Yap" butonu ekle. Bu buton `/api/logout`'a istek göndermeli.
   - Uygulama arayüzüne, giriş yapmış kullanıcının kendi şifresini değiştirebileceği bir "Şifre Değiştir" butonu ve modalı ekle.
 
+- [X] **Bulgu'lara Dosya Ekleme**
+  - **Açıklama:** "Yeni Bulgu Ekle/Düzenle" ekranına, ekran görüntüsü veya log dosyası gibi dosyaların eklenebileceği bir alan eklemek.
+  - **Teknik Adımlar:** Backend'e dosya yükleme işlemleri için `multer` kütüphanesini eklemek. Yüklenen dosyaları sunucuda bir klasörde saklamak ve veritabanında hangi bulguya ait olduğunu ilişkilendirmek.
+
+  ## Bölüm 4: Kod Yapısını İyileştirme (Refactoring) (Yeni Eklendi)
+
+Bu bölüm, uygulama büyüdükçe yönetimi zorlaşan `server.js` ve `script.js` dosyalarını daha küçük ve yönetilebilir modüllere ayırma görevlerini içerir.
+
+- [x] **Backend Kodunu Bölme (`server.js`)**
+  - **Amaç:** `server.js` dosyasını bir "trafik polisi" haline getirip, ana iş mantığını ayrı dosyalara taşımak.
+  - **Adımlar:**
+    - Proje ana dizininde `routes` adında bir klasör oluştur.
+    - `vendors.js`, `bulgular.js`, `users.js` gibi her bir API grubu için ayrı dosyalar oluştur.
+    - `server.js` içindeki ilgili API endpoint kodlarını bu yeni dosyalara taşı.
+    - Ana `server.js` dosyasında, gelen istekleri `app.use('/api/vendors', vendorRoutes)` gibi komutlarla ilgili dosyalara yönlendir.
+
+- [X] **Frontend Kodunu Bölme (`script.js`)**
+  - **Amaç:** `script.js` dosyasını, sorumluluklarına göre (API istekleri, arayüz çizimi, olay yönetimi vb.) daha küçük modüllere ayırmak.
+  - **Adımlar:**
+    - `public` klasörü içinde `js` adında yeni bir klasör oluştur.
+    - `ui.js` (tüm `get...HTML` fonksiyonları için), `api.js` (`apiRequest` fonksiyonu için) gibi modül dosyaları oluştur.
+    - Bu dosyalarda `export` anahtar kelimesi ile fonksiyonları dışa aktar.
+    - Ana `script.js` dosyasında `import` anahtar kelimesi ile bu fonksiyonları içeri aktar.
+    - `index.html` dosyasındaki `<script src="script.js">` etiketine `type="module"` özelliğini ekle.
+
 
   ### Yapılacaklar Listesi (To-Do)
 
@@ -111,13 +136,12 @@ Bu bölüm, uygulamanın işlevselliğini ve kullanıcı deneyimini daha da art�
 
 ### Öncelik 1: Hemen Değer Katacak Özellikler
 
-- [ ] **Bulgu'lara Dosya Ekleme**
-  - **Açıklama:** "Yeni Bulgu Ekle/Düzenle" ekranına, ekran görüntüsü veya log dosyası gibi dosyaların eklenebileceği bir alan eklemek.
-  - **Teknik Adımlar:** Backend'e dosya yükleme işlemleri için `multer` kütüphanesini eklemek. Yüklenen dosyaları sunucuda bir klasörde saklamak ve veritabanında hangi bulguya ait olduğunu ilişkilendirmek.
 
-- [ ] **Yorum Sistemi ve Değişiklik Geçmişi (Audit Log)**
-  - **Açıklama:** Her bulgunun altına, ilgili kişilerle yazışmak için bir yorum bölümü eklemek. Ayrıca, bulgu üzerinde yapılan her değişikliğin (örn: durum değişikliği, atanan kişi değişikliği) tarihçesini tutmak.
-  - **Teknik Adımlar:** Veritabanına `comments` ve `history` adında yeni tablolar eklemek. Backend'de bu tabloları yönetecek API'lar oluşturmak. Frontend'de bu verileri gösterecek arayüzleri tasarlamak.
+- [ ] **Değişiklik Geçmişi (Audit Log)**
+  - **Açıklama:** Bulgu üzerinde yapılan her değişikliğin (durum değişkliği, alanların güncellenmesi, dosya eklenmesi vs.) tarihçesini tutmak.
+  - **Teknik Adımlar:** Veritabanına `history` adında yeni tablolar eklemek. Backend'de bu tabloları yönetecek API'lar oluşturmak. Frontend'de bu verileri gösterecek arayüzleri tasarlamak.
+- [ ] **Kullanıcının Otomatik Yazılması**
+  - **Açıklama:** Yeni Bulgu/Talep Ekle ve  Bulgu/Talep Düzenle ekranlarındaki Giren Kullanıcı ve ÇÖzüm Onaylayan Kullanıcı değerlerinin sisteme giriş yapmış kullanıcı adı ve soyadı ile otomatik dolması. Zaten eklenmiş olan kayıtlar ve import ederken eklenen ve sistemde olmayan kullanıcılar kalacak.
 
 ### Öncelik 2: Veri ve Raporlama İyileştirmeleri
 
@@ -134,3 +158,4 @@ Bu bölüm, uygulamanın işlevselliğini ve kullanıcı deneyimini daha da art�
 - [ ] **Kullanıcı Rolleri ve Yetkilendirme (Admin, User)**
   - **Açıklama:** Uygulamada "Admin" ve "Normal Kullanıcı" gibi roller tanımlamak. Sadece Admin yetkisine sahip kullanıcıların yeni kullanıcı ekleyebilmesi, vendor/model silebilmesi gibi yetki kontrolleri eklemek.
   - **Teknik Adımlar:** `users` tablosuna bir `role` kolonu eklemek. Backend'deki API'ların, işlemi yapmaya çalışan kullanıcının rolünü kontrol etmesini sağlamak. Frontend'de, kullanıcının rolüne göre belirli butonları (örn: "Yeni Kullanıcı Ekle") gizlemek veya göstermek.
+

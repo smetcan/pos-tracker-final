@@ -439,15 +439,25 @@ function attachBulguTableActionListeners(bulgular) {
     });
 
     document.querySelectorAll('.view-bulgu-btn').forEach(link => {
-        link.addEventListener('click', async (e) => { // async eklendi
+        link.addEventListener('click', async (e) => {
             e.preventDefault();
             const id = link.dataset.bulguId;
             const bulgu = bulgular.find(b => String(b.id) === String(id)) || bulgularData.find(b => String(b.id) === String(id));
             if (bulgu) {
-                // YENİ: Pencereyi açmadan önce ekleri çek
-                const attachments = await apiRequest(`/api/bulgu/${id}/attachments`);
-                modalContainer.innerHTML = getBulguViewModalHTML(bulgu, attachments); // Ekleri HTML'e gönder
-                document.querySelectorAll('[data-close-bulgu-view]').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+                try {
+                    // --- GÜNCELLEME: Artık 3 API'yı birden çağırıyoruz ---
+                    const [attachments, history] = await Promise.all([
+                        apiRequest(`/api/bulgu/${id}/attachments`),
+                        apiRequest(`/api/bulgu/${id}/history`)
+                    ]);
+                    
+                    modalContainer.innerHTML = getBulguViewModalHTML(bulgu, attachments, history); // History verisini modal'a gönder
+                    
+                    document.querySelectorAll('[data-close-bulgu-view]').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+                } catch (error) {
+                    modalContainer.innerHTML = showErrorModal('Bulgu detayları yüklenirken hata oluştu: ' + error.message);
+                    document.getElementById('close-error-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');
+                }
             }
         });
     });
