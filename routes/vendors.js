@@ -5,8 +5,30 @@ const router = express.Router();
 
 // --- VENDOR API'LARI ---
 
+// DELETE öncesi kontrol: vendor'a bağlı model/versiyon var mı? Varsa engelle
+router.use('/vendors/:id', (req, res, next) => {
+    if (req.method !== 'DELETE') return next();
+    const { id } = req.params;
+    db.serialize(() => {
+        db.get('SELECT COUNT(*) AS cnt FROM Model WHERE vendorId = ?', [id], (err1, row1) => {
+            if (err1) return res.status(500).json({ error: 'Model bağlantıları kontrol edilirken hata.' });
+            db.get('SELECT COUNT(*) AS cnt FROM AppVersion WHERE vendorId = ?', [id], (err2, row2) => {
+                if (err2) return res.status(500).json({ error: 'Versiyon bağlantıları kontrol edilirken hata.' });
+                const mc = row1?.cnt || 0; const vc = row2?.cnt || 0;
+                if (mc > 0 || vc > 0) {
+                    const parts = [];
+                    if (mc > 0) parts.push(`${mc} model`);
+                    if (vc > 0) parts.push(`${vc} versiyon`);
+                    return res.status(409).json({ error: `Bu vendor'a bağlı ${parts.join(' ve ')} bulunduğu için silinemez.` });
+                }
+                next();
+            });
+        });
+    });
+});
+
 router.get('/vendors', (req, res) => {
-    const sql = `SELECT v.*, (SELECT COUNT(*) FROM VendorContact vc WHERE vc.vendorId = v.id) as contactCount FROM Vendor v ORDER BY v.id ASC`;
+    const sql = `SELECT v.*, (SELECT COUNT(*) FROM VendorContact vc WHERE vc.vendorId = v.id) as contactCount FROM Vendor v ORDER BY v.name COLLATE NOCASE ASC`;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ "error": err.message });
         res.json(rows);
