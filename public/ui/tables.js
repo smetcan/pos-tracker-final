@@ -38,6 +38,7 @@
                 <td class="p-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${getBadgeClass(bulgu.bulguTipi)}">${bulgu.bulguTipi}</span></td>
                 <td class="p-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${getBadgeClass(bulgu.etkiSeviyesi)}">${bulgu.etkiSeviyesi}</span></td>
                 <td class="p-3 text-sm text-gray-600">${tespit}</td>
+                <td class="p-3 text-sm text-gray-600">${bulgu.girenKullanici || ''}</td>
                 <td class="p-3 text-sm text-gray-600">${onaylayan}</td>
                 <td class="p-3 text-sm text-gray-600">${onayTarihi}</td>
                 <td class="p-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${getBadgeClass(bulgu.status)}">${bulgu.status}</span></td>
@@ -63,6 +64,7 @@
                                     <th class="p-3 text-left">Tip</th>
                                     <th class="p-3 text-left">Etki</th>
                                     <th class="p-3 text-left">Tespit Tarihi</th>
+                                    <th class="p-3 text-left">Giren Kullanıcı</th>
                                     <th class="p-3 text-left">Onaylayan Kişi</th>
                                     <th class="p-3 text-left">Onay Tarihi</th>
                                     <th class="p-3 text-left">Durum</th>

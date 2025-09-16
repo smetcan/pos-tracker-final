@@ -13,6 +13,7 @@ const vendorRoutes = require('./routes/vendors');
 const modelRoutes = require('./routes/models');
 const versionRoutes = require('./routes/versions');
 const bulguRoutes = require('./routes/bulgular');
+const notlarRoutes = require('./routes/notlar');
 const attachmentRoutes = require('./routes/attachments');
 const dashboardRoutes = require('./routes/dashboard');
 
@@ -59,6 +60,7 @@ app.use('/api', vendorRoutes);
 app.use('/api', modelRoutes);
 app.use('/api', versionRoutes);
 app.use('/api', bulguRoutes);
+app.use('/api', notlarRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api', dashboardRoutes);
 

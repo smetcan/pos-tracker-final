@@ -5,11 +5,25 @@ const db = require('../config/db');
 const router = express.Router();
 
 // --- YARDIMCI FONKSİYON: Geçmiş kaydı oluşturur (bulgular.js'den kopyalanabilir veya ortak bir dosyaya alınabilir) ---
+function normalizeTR(text) {
+    if (!text || typeof text !== 'string') return text;
+    const map = new Map([
+        ['Ã‡','Ç'], ['Ã–','Ö'], ['Ãœ','Ü'],
+        ['Ã§','ç'], ['Ã¶','ö'], ['Ã¼','ü'],
+        ['ÅŸ','ş'], ['Åž','Ş'],
+        ['Ä±','ı'], ['Ä°','İ'],
+        ['ÄŸ','ğ'], ['Äž','Ğ']
+    ]);
+    let out = text;
+    for (const [bad, good] of map.entries()) out = out.split(bad).join(good);
+    return out;
+}
+
 async function logHistory(bulguId, req, action, details = '') {
     const userId = req.session.user.id;
     const userName = req.session.user.userName;
-    const sql = `INSERT INTO history (bulguId, userId, userName, action, details) VALUES (?, ?, ?, ?, ?)`;
-    db.run(sql, [bulguId, userId, userName, action, details]);
+    const sql = `INSERT INTO history (bulguId, userId, userName, action, details, timestamp) VALUES (?, ?, ?, ?, ?, datetime('now','localtime'))`;
+    db.run(sql, [bulguId, userId, userName, normalizeTR(action), normalizeTR(details)]);
 }
 
 // Dosya Yükleme (Multer) Ayarları

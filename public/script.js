@@ -22,7 +22,10 @@ async function main() {
 
     // 2. ANA UYGULAMA MANTIĞI
     const userNameSpan = document.getElementById('current-user-name');
-    if (userNameSpan) userNameSpan.textContent = currentUser.userName;
+    if (userNameSpan) {
+        const displayName = [currentUser.name, currentUser.surname].filter(Boolean).join(' ').trim();
+        userNameSpan.textContent = displayName || currentUser.userName || '';
+    }
 
     // Yönlendirici (Router) fonksiyonunu, global değişkene atıyoruz.
     router = async function() {
@@ -46,7 +49,8 @@ async function main() {
                 attachBulguTableActionListeners(bulgularResponse.data);
             } else if (hash === '#/bulgular') {
                 navLinks.bulgular.classList.add('active');
-                if (vendorsData.length === 0) {
+                // Vendorlar yüklüyse bile modeller/versiyonlar boş olabilir; hepsini garantiye al
+                if (vendorsData.length === 0 || modelsData.length === 0 || versionsData.length === 0) {
                     const [vendors, models, versions] = await Promise.all([
                         apiRequest('/api/vendors'), apiRequest('/api/models'), apiRequest('/api/versions')
                     ]);

@@ -21,7 +21,7 @@ router.post('/users', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const sql = 'INSERT INTO users (userName, name, surname, email, password) VALUES (?, ?, ?, ?, ?)';
-        db.run(sql, [userName, name, surname, email, hashedPassword], function (err) {
+        db.run(sql, [String(userName).trim().toLowerCase(), name, surname, (email || '').trim() || null, hashedPassword], function (err) {
             if (err) {
                 if (err.message.includes('UNIQUE constraint failed')) {
                    return res.status(409).json({ error: 'Bu kullanıcı adı veya e-posta zaten kullanımda.' });
@@ -64,6 +64,25 @@ router.delete('/users/:id', (req, res) => {
         if (err) return res.status(500).json({ error: 'Kullanıcı silinirken bir hata oluştu.' });
         if (this.changes === 0) return res.status(404).json({ error: 'Silinecek kullanıcı bulunamadı.' });
         res.status(200).json({ message: 'Kullanıcı başarıyla silindi.' });
+    });
+});
+
+// Kullanıcı bilgilerini güncelle
+router.put('/users/:id', (req, res) => {
+    const { id } = req.params;
+    const { userName, name, surname, email } = req.body;
+    if (!userName || !name || !surname) return res.status(400).json({ error: 'Kullanıcı adı, isim ve soyisim zorunludur.' });
+
+    const sql = 'UPDATE users SET userName = ?, name = ?, surname = ?, email = ? WHERE id = ?';
+    db.run(sql, [String(userName).trim().toLowerCase(), name, surname, (email || '').trim() || null, id], function (err) {
+        if (err) {
+            if (err.message.includes('UNIQUE constraint failed')) {
+                return res.status(409).json({ error: 'Bu kullanıcı adı veya e-posta zaten kullanımda.' });
+            }
+            return res.status(500).json({ error: 'Kullanıcı güncellenirken bir veritabanı hatası oluştu.' });
+        }
+        if (this.changes === 0) return res.status(404).json({ error: 'Güncellenecek kullanıcı bulunamadı.' });
+        res.status(200).json({ message: 'Kullanıcı bilgileri başarıyla güncellendi.' });
     });
 });
 

@@ -59,6 +59,10 @@ async function fetchAndRenderBulgular(options = {}) {
         const response = await apiRequest(`/api/bulgular?${params.toString()}`);
         bulgularData = response.data;
         renderBulgularPage(response.data, response.pagination, options);
+        // Render sonrası aksiyon ve filtre olaylarını yeniden bağla
+        if (typeof attachBulgularEventListeners === 'function') {
+            attachBulgularEventListeners(bulgularData);
+        }
     } catch (error) {
         modalContainer.innerHTML = showErrorModal('Bulgular yüklenirken bir hata oluştu: ' + error.message);
         document.getElementById('close-error-modal')?.addEventListener('click', () => modalContainer.innerHTML = '');

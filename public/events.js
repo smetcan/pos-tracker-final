@@ -125,6 +125,69 @@ function attachVendorModalListeners(vendor = {}, contacts = []) {
             showErrorModal(error.message);
         }
     });
+
+    // Yonetim sayfasındaki yeni ekleme butonları için global click handler
+    document.addEventListener('click', async (evt) => {
+        const t = evt.target;
+        if (!t) return;
+        // Yeni Model Ekle
+        if (t.id === 'add-model-btn') {
+            evt.preventDefault();
+            modalContainer.innerHTML = getModelModalHTML(vendorsData);
+            document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+            document.getElementById('model-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    name: document.getElementById('model-name').value,
+                    code: document.getElementById('model-code').value,
+                    vendorId: document.getElementById('model-vendor-id').value,
+                    isTechpos: document.getElementById('model-is-techpos').checked,
+                    isAndroidPos: document.getElementById('model-is-android-pos').checked,
+                    isOkcPos: document.getElementById('model-is-okc-pos').checked,
+                };
+                try {
+                    await apiRequest('/api/models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+            return;
+        }
+
+        // Yeni Versiyon Ekle
+        if (t.id === 'add-version-btn') {
+            evt.preventDefault();
+            modalContainer.innerHTML = getVersionModalHTML(vendorsData, modelsData);
+            attachVersionModalListeners();
+            return;
+        }
+
+        // Yeni Kullanıcı Ekle
+        if (t.id === 'add-user-btn') {
+            evt.preventDefault();
+            modalContainer.innerHTML = getUserModalHTML();
+            document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+            document.getElementById('user-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    userName: document.getElementById('user-userName').value,
+                    name: document.getElementById('user-name').value,
+                    surname: document.getElementById('user-surname').value,
+                    email: document.getElementById('user-email').value,
+                    password: document.getElementById('user-password').value,
+                };
+                try {
+                    await apiRequest('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+        }
+    });
 }
 
 function attachVersionModalListeners(version = null) {
@@ -257,12 +320,21 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
             modelsContainer.innerHTML = '<p class="text-xs text-gray-500 col-span-full">Bu vendor\'a ait model bulunamadı.</p>';
             return;
         }
-        modelsContainer.innerHTML = filteredModels.map(m => `
+        const selectedIds = (bulgu && bulgu.modelIds)
+            ? (typeof bulgu.modelIds === 'string' ? bulgu.modelIds.split(',').map(s => s.trim()) : bulgu.modelIds)
+            : [];
+        const selectedNames = (!selectedIds || selectedIds.length === 0) && bulgu && bulgu.models
+            ? (typeof bulgu.models === 'string' ? bulgu.models.split(',').map(s => s.trim()) : bulgu.models)
+            : [];
+        modelsContainer.innerHTML = filteredModels.map(m => {
+            const isChecked = (selectedIds && selectedIds.map(String).includes(String(m.id))) ||
+                              (selectedNames && selectedNames.includes(m.name));
+            return `
             <div class="flex items-center">
-                <input type="checkbox" id="model-${m.id}" value="${m.id}" class="model-checkbox h-4 w-4 rounded border-gray-300">
+                <input type="checkbox" id="model-${m.id}" value="${m.id}" class="model-checkbox h-4 w-4 rounded border-gray-300" ${isChecked ? 'checked' : ''}>
                 <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     };
 
     const updateVersionsList = () => {
@@ -275,6 +347,7 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
         let optionsHTML = '<option value="">Seçiniz...</option>';
         optionsHTML += filteredVersions.map(v => `<option value="${v.id}">${v.versionNumber}</option>`).join('');
         versionSelect.innerHTML = optionsHTML;
+        if (bulgu && bulgu.cozumVersiyonId) { try { versionSelect.value = String(bulgu.cozumVersiyonId); } catch (_) {} }
     };
 
     const toggleOnayFields = () => {
@@ -301,6 +374,20 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
     });
 
     document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+    
+    // Açılışta seçili vendor ve duruma göre alanları doldur
+    try {
+        if (vendorSelect) {
+            if (bulgu && bulgu.id) {
+                vendorSelect.disabled = true;
+            }
+            updateModelsList();
+            updateVersionsList();
+        }
+        if (statusSelect) {
+            toggleOnayFields();
+        }
+    } catch (_) { /* no-op */ }
 
     document.querySelectorAll('.delete-attachment-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
@@ -338,7 +425,9 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
             girenKullanici: document.getElementById('bulgu-giren-kullanici').value,
             cozumOnaylayanKullanici: onaylayanInput.value,
             cozumOnayTarihi: onayTarihiInput.value,
+            cozumOnayAciklamasi: document.getElementById('bulgu-cozum-onay-aciklama')?.value || null,
             detayliAciklama: document.getElementById('bulgu-detayli-aciklama').value,
+            notlar: document.getElementById('bulgu-notlar')?.value || null,
             modelIds: selectedModelIds
         };
 
@@ -350,6 +439,15 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
             } else {
                 const newBulguResponse = await apiRequest('/api/bulgular', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bulguData) });
                 targetBulguId = newBulguResponse.id;
+            }
+
+            // Persist Notlar separately to ensure it is saved
+            if (targetBulguId) {
+                await apiRequest(`/api/bulgu/${targetBulguId}/notlar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notlar: bulguData.notlar })
+                });
             }
             
             const fileInput = document.getElementById('bulgu-attachments');
@@ -573,9 +671,284 @@ function attachYonetimEventListeners() {
             }
         });
     });
+
+    // Vendor: İletişim kişileri
+    document.querySelectorAll('.open-contacts-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const vendorId = button.dataset.vendorId;
+            const vendor = vendorsData.find(v => v.id == vendorId);
+            if (!vendor) return;
+            const contacts = await apiRequest(`/api/vendors/${vendorId}/contacts`).catch(() => []);
+            modalContainer.innerHTML = getVendorContactsModalHTML(vendor, contacts);
+            document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+        });
+    });
+
+    // Vendor: Sil
+    document.querySelectorAll('.delete-vendor-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const vendorId = button.dataset.vendorId;
+            const vendorName = button.dataset.vendorName || '';
+            modalContainer.innerHTML = getDeleteConfirmModalHTML(`"${vendorName}" vendorı silinsin mi?`, 'Bu işlem geri alınamaz.');
+            document.getElementById('cancel-delete')?.addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+                try {
+                    await apiRequest(`/api/vendors/${vendorId}`, { method: 'DELETE' });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    modalContainer.innerHTML = '';
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+
+    // Model: Yeni butonu zaten yukarıda eklendi (add-model-btn)
+
+    // Model: Düzenle
+    document.querySelectorAll('.edit-model-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const modelId = button.dataset.modelId;
+            const model = modelsData.find(m => m.id == modelId);
+            if (!model) return;
+            modalContainer.innerHTML = getModelModalHTML(vendorsData, model);
+            document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+            document.getElementById('model-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    name: document.getElementById('model-name').value,
+                    code: document.getElementById('model-code').value,
+                    vendorId: document.getElementById('model-vendor-id').value,
+                    isTechpos: document.getElementById('model-is-techpos').checked,
+                    isAndroidPos: document.getElementById('model-is-android-pos').checked,
+                    isOkcPos: document.getElementById('model-is-okc-pos').checked,
+                };
+                try {
+                    await apiRequest(`/api/models/${modelId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+
+    // Model: Sil
+    document.querySelectorAll('.delete-model-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const modelId = button.dataset.modelId;
+            const modelName = button.dataset.modelName || '';
+            modalContainer.innerHTML = getDeleteConfirmModalHTML(`"${modelName}" modeli silinsin mi?`, 'Bu işlem geri alınamaz.');
+            document.getElementById('cancel-delete')?.addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+                try {
+                    await apiRequest(`/api/models/${modelId}`, { method: 'DELETE' });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    modalContainer.innerHTML = '';
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+
+    // Versiyon: Görüntüle
+    document.querySelectorAll('.view-version-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const versionId = link.dataset.versionId;
+            const version = versionsData.find(v => v.id == versionId);
+            if (!version) return;
+            modalContainer.innerHTML = getVersionViewModalHTML(version);
+            document.querySelectorAll('.close-modal-btn, .cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+        });
+    });
+
+    // Versiyon: Düzenle
+    document.querySelectorAll('.edit-version-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const versionId = button.dataset.versionId;
+            const version = versionsData.find(v => v.id == versionId);
+            if (!version) return;
+            modalContainer.innerHTML = getVersionModalHTML(vendorsData, modelsData, version);
+            attachVersionModalListeners(version);
+        });
+    });
+
+    // Versiyon: Sil
+    document.querySelectorAll('.delete-version-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const versionId = button.dataset.versionId;
+            const versionNumber = button.dataset.versionNumber || '';
+            modalContainer.innerHTML = getDeleteConfirmModalHTML(`"${versionNumber}" versiyonu silinsin mi?`, 'Bu işlem geri alınamaz.');
+            document.getElementById('cancel-delete')?.addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+                try {
+                    await apiRequest(`/api/versions/${versionId}`, { method: 'DELETE' });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    modalContainer.innerHTML = '';
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+
+    // Kullanıcı: Şifre Sıfırla
+    document.querySelectorAll('.reset-password-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const userId = button.dataset.userId;
+            const userName = button.dataset.userName || '';
+            modalContainer.innerHTML = getResetPasswordModalHTML(userName);
+            document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+            document.getElementById('reset-password-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const newPassword = document.getElementById('new-password').value;
+                try {
+                    await apiRequest(`/api/users/${userId}/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword }) });
+                    modalContainer.innerHTML = '';
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+
+    // Kullanıcı: Sil
+    document.querySelectorAll('.delete-user-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const userId = button.dataset.userId;
+            const userName = button.dataset.userName || '';
+            modalContainer.innerHTML = getDeleteConfirmModalHTML(`Kullanıcı "${userName}" silinsin mi?`, 'Bu işlem geri alınamaz.');
+            document.getElementById('cancel-delete')?.addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+                try {
+                    await apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
+                    modalContainer.innerHTML = '';
+                    router();
+                } catch (error) {
+                    modalContainer.innerHTML = '';
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+
+    // Kullanıcı: Düzenle (dinamik ekleme veya var olan butonlar)
+    const usersTbody = document.querySelector('#users-tab tbody');
+    if (usersTbody && usersData && Array.isArray(usersData)) {
+        const rows = usersTbody.querySelectorAll('tr');
+        rows.forEach((tr, idx) => {
+            const actionsCell = tr.querySelector('td.p-3.text-right') || tr.lastElementChild;
+            if (!actionsCell) return;
+            let editBtn = actionsCell.querySelector('.edit-user-btn');
+            if (!editBtn) {
+                editBtn = document.createElement('button');
+                editBtn.className = 'edit-user-btn p-1 text-sm text-blue-600';
+                editBtn.textContent = 'Düzenle';
+                editBtn.style.marginRight = '6px';
+                actionsCell.prepend(editBtn);
+            }
+            const user = usersData[idx];
+            if (!user) return;
+            editBtn.onclick = () => {
+                modalContainer.innerHTML = getUserModalHTML(user);
+                document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+                // Alanları mevcut değerlerle doldur (şablon dolduramadıysa)
+                const nameInput = document.getElementById('user-name');
+                const surnameInput = document.getElementById('user-surname');
+                const userNameInput = document.getElementById('user-userName');
+                const emailInput = document.getElementById('user-email');
+                if (nameInput && !nameInput.value) nameInput.value = user.name || '';
+                if (surnameInput && !surnameInput.value) surnameInput.value = user.surname || '';
+                if (userNameInput && !userNameInput.value) userNameInput.value = user.userName || '';
+                if (emailInput && !emailInput.value) emailInput.value = user.email || '';
+                // Şifre alanını gizle/opsiyonel yap
+                const pwdInput = document.getElementById('user-password');
+                if (pwdInput) {
+                    pwdInput.removeAttribute('required');
+                    const pwdWrapper = pwdInput.closest('.col-span-2');
+                    if (pwdWrapper) pwdWrapper.classList.add('hidden');
+                }
+                // Submit -> PUT /api/users/:id
+                document.getElementById('user-form')?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const payload = {
+                        userName: document.getElementById('user-userName').value,
+                        name: document.getElementById('user-name').value,
+                        surname: document.getElementById('user-surname').value,
+                        email: document.getElementById('user-email').value
+                    };
+                    try {
+                        await apiRequest(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        modalContainer.innerHTML = '';
+                        router();
+                    } catch (error) {
+                        showErrorModal(error.message);
+                    }
+                });
+            };
+        });
+    }
     // ... Diğer tüm .edit, .delete, .add butonlarının olayları aynı kalacak ...
     // Kısacası, bu dosyanın geri kalanını mevcut kodlarından kopyalayabilirsin,
     // sadece yukarıdaki renderYonetimPage() çağrılarının router() ile değiştirildiğinden emin ol.
+    // Yeni Model Ekle
+    document.getElementById('add-model-btn')?.addEventListener('click', () => {
+        modalContainer.innerHTML = getModelModalHTML(vendorsData);
+        document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+        document.getElementById('model-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('model-name').value,
+                code: document.getElementById('model-code').value,
+                vendorId: document.getElementById('model-vendor-id').value,
+                isTechpos: document.getElementById('model-is-techpos').checked,
+                isAndroidPos: document.getElementById('model-is-android-pos').checked,
+                isOkcPos: document.getElementById('model-is-okc-pos').checked,
+            };
+            try {
+                await apiRequest('/api/models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                modalContainer.innerHTML = '';
+                router();
+            } catch (error) {
+                showErrorModal(error.message);
+            }
+        });
+    });
+
+    // Yeni Versiyon Ekle
+    document.getElementById('add-version-btn')?.addEventListener('click', () => {
+        modalContainer.innerHTML = getVersionModalHTML(vendorsData, modelsData);
+        attachVersionModalListeners();
+    });
+
+    // Yeni Kullanıcı Ekle
+    document.getElementById('add-user-btn')?.addEventListener('click', () => {
+        modalContainer.innerHTML = getUserModalHTML();
+        document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+        document.getElementById('user-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                userName: document.getElementById('user-userName').value,
+                name: document.getElementById('user-name').value,
+                surname: document.getElementById('user-surname').value,
+                email: document.getElementById('user-email').value,
+                password: document.getElementById('user-password').value,
+            };
+            try {
+                await apiRequest('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                modalContainer.innerHTML = '';
+                router();
+            } catch (error) {
+                showErrorModal(error.message);
+            }
+        });
+    });
 }
 
 
@@ -637,6 +1010,7 @@ function attachAppEventListeners() {
         e.preventDefault();
         try {
             await apiRequest('/api/logout', { method: 'POST' });
+            try { document.cookie = 'connect.sid=; Max-Age=0; path=/'; } catch (_) {}
             window.location.href = '/login.html';
         } catch (error) {
             showErrorModal('Çıkış yapılırken bir hata oluştu.');
