@@ -501,6 +501,7 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
         startImportBtn.disabled = true;
 
         Papa.parse(file, {
+            encoding: "ISO-8859-9",
             header: true,
             skipEmptyLines: true,
             complete: async (results) => {
@@ -508,6 +509,7 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
                 totalRecords.textContent = records.length;
                 let processedCount = 0;
                 const batchSize = 50;
+                let hasErrors = false;
 
                 for (let i = 0; i < records.length; i += batchSize) {
                     const batch = records.slice(i, i + batchSize);
@@ -518,6 +520,7 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
                             body: JSON.stringify({ records: batch })
                         });
                         if (response.errors && response.errors.length > 0) {
+                            hasErrors = true;
                             response.errors.forEach(err => {
                                 importResultsDiv.innerHTML += `<p class="text-red-600">Satır ${err.rowIndex}: ${err.error}</p>`;
                             });
@@ -526,6 +529,7 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
                         progressCount.textContent = processedCount;
                         progressBar.style.width = `${(processedCount / records.length) * 100}%`;
                     } catch (error) {
+                        hasErrors = true;
                         importResultsDiv.innerHTML += `<p class="text-red-600">Toplu işlem sırasında hata: ${error.message}</p>`;
                         processedCount += batch.length;
                         progressCount.textContent = processedCount;
@@ -535,12 +539,17 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
 
                 progressDiv.classList.add('hidden');
                 importResultsDiv.classList.remove('hidden');
-                startImportBtn.disabled = false;
-                bulgularData = [];
-                fetchAndRenderBulgular({ page: 1 }); // Sayfayı yenile
-                if (importResultsDiv.innerHTML === '') {
+                if (!hasErrors) {
                     importResultsDiv.innerHTML = '<p class="text-green-600">Tüm kayıtlar başarıyla içeri aktarıldı.</p>';
+                    startImportBtn.disabled = true;
+                } else {
+                    startImportBtn.disabled = false;
+                    if (!importResultsDiv.innerHTML) {
+                        importResultsDiv.innerHTML = '<p class="text-red-600">İçe aktarma tamamlanamadı. Lütfen hataları kontrol edin.</p>';
+                    }
                 }
+                bulgularData = []
+                fetchAndRenderBulgular({ page: 1 }); // Sayfayı yenile
             },
             error: (err) => {
                 showErrorModal('CSV dosyasını ayrıştırma hatası: ' + err.message);
@@ -994,6 +1003,58 @@ function attachBulgularEventListeners(bulgular) {
         fetchAndRenderBulgular({ page: 1, focusOn: 'bulgu-search-input' });
     });
     
+    const exportButton = document.getElementById('bulgu-export-btn');
+    if (exportButton) {
+        exportButton.addEventListener('click', async () => {
+            if (exportButton.dataset.loading === 'true') return;
+            const originalText = exportButton.textContent;
+            exportButton.dataset.loading = 'true';
+            exportButton.disabled = true;
+            exportButton.textContent = 'Hazırlanıyor...';
+            try {
+                const params = new URLSearchParams();
+                if (bulguFilters.vendorId && bulguFilters.vendorId !== 'all') params.append('vendorId', bulguFilters.vendorId);
+                if (bulguFilters.status && bulguFilters.status !== 'all') params.append('status', bulguFilters.status);
+                if (bulguFilters.tip && bulguFilters.tip !== 'all') params.append('tip', bulguFilters.tip);
+                if (bulguFilters.searchTerm) params.append('searchTerm', bulguFilters.searchTerm);
+                const queryString = params.toString();
+                const exportUrl = queryString ? `/api/bulgular/export?${queryString}` : '/api/bulgular/export';
+                const response = await fetch(exportUrl, { credentials: 'same-origin' });
+                if (!response.ok) {
+                    let message = 'Dışa aktarma işlemi başarısız oldu.';
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        try {
+                            const body = await response.json();
+                            if (body && body.error) message = body.error;
+                        } catch (_) {}
+                    } else {
+                        const errorText = await response.text();
+                        if (errorText) message = errorText;
+                    }
+                    throw new Error(message);
+                }
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = downloadUrl;
+                const timestamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+                anchor.download = `bulgu-export-${timestamp}.csv`;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 5000);
+            } catch (error) {
+                const errorMessage = error && error.message ? error.message : 'Dışa aktarma işlemi sırasında beklenmeyen bir hata oluştu.';
+                showErrorModal(errorMessage);
+            } finally {
+                exportButton.disabled = false;
+                exportButton.textContent = originalText;
+                delete exportButton.dataset.loading;
+            }
+        });
+    }
+
     // 3. ADIM: Filtre elemanlarının değerlerini koru
     if (searchInput) searchInput.value = bulguFilters.searchTerm;
     const vendorFilter = document.getElementById('bulgu-vendor-filter');

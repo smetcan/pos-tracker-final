@@ -45,6 +45,204 @@ router.get('/bulgu/:id/history', (req, res) => {
     });
 });
 
+router.get('/bulgular/export', (req, res) => {
+
+    const { vendorId, status, tip, searchTerm } = req.query;
+
+
+
+    const params = [];
+
+    const whereClauses = [];
+
+
+
+    let sql = `
+
+        SELECT b.id, b.baslik, b.bulguTipi, b.etkiSeviyesi, b.tespitTarihi, b.detayliAciklama,
+
+               b.girenKullanici, b.vendorTrackerNo, b.status, b.cozumOnaylayanKullanici, b.cozumOnayTarihi,
+
+               b.notlar,
+
+               v.name as vendorName,
+
+               GROUP_CONCAT(DISTINCT m.name) as models,
+
+               av.versionNumber as cozumVersiyon
+
+        FROM Bulgu b
+
+        LEFT JOIN Vendor v ON b.vendorId = v.id
+
+        LEFT JOIN BulguModel bm ON b.id = bm.bulguId
+
+        LEFT JOIN Model m ON bm.modelId = m.id
+
+        LEFT JOIN AppVersion av ON b.cozumVersiyonId = av.id`;
+
+
+
+    if (vendorId && vendorId !== 'all') {
+
+        whereClauses.push(`b.vendorId = ?`);
+
+        params.push(vendorId);
+
+    }
+
+    if (status && status !== 'all') {
+
+        whereClauses.push(`b.status = ?`);
+
+        params.push(status);
+
+    }
+
+    if (tip && tip !== 'all') {
+
+        whereClauses.push(`b.bulguTipi = ?`);
+
+        params.push(tip);
+
+    }
+
+    if (searchTerm) {
+
+        whereClauses.push(`(b.baslik LIKE ? OR b.detayliAciklama LIKE ?)`);
+
+        const searchTermLike = `%${searchTerm}%`;
+
+        params.push(searchTermLike, searchTermLike);
+
+    }
+
+
+
+    if (whereClauses.length > 0) {
+
+        sql += ' WHERE ' + whereClauses.join(' AND ');
+
+    }
+
+
+
+    sql += ' GROUP BY b.id ORDER BY b.id DESC';
+
+
+
+    db.all(sql, params, (err, rows) => {
+
+        if (err) {
+
+            return res.status(500).json({ error: `Bulgu verileri dýþa aktarýlýrken hata: ${err.message}` });
+
+        }
+
+
+
+        const columns = [
+
+            { key: 'id', label: "ID" },
+
+            { key: 'baslik', label: "Ba\u015Fl\u0131k" },
+
+            { key: 'vendorName', label: "Vendor" },
+
+            { key: 'bulguTipi', label: "Bulgu Tipi" },
+
+            { key: 'etkiSeviyesi', label: "Etki Seviyesi" },
+
+            { key: 'status', label: "Durum" },
+
+            { key: 'tespitTarihi', label: "Tespit Tarihi" },
+
+            { key: 'cozumVersiyon', label: "\u00c7\u00f6z\u00fcm Versiyonu" },
+
+            { key: 'cozumOnayTarihi', label: "\u00c7\u00f6z\u00fcm Onay Tarihi" },
+
+            { key: 'girenKullanici', label: "Kayd\u0131 Giren Ki\u015Fi" },
+
+            { key: 'vendorTrackerNo', label: "Vendor Takip No" },
+
+            { key: 'notlar', label: "Notlar" },
+
+            { key: 'models', label: "Etkilenen Modeller" },
+
+            { key: 'detayliAciklama', label: "Detayl\u0131 A\u00e7\u0131klama" }
+
+        ];
+
+
+
+        const delimiter = ';';
+
+        const escapeValue = (value) => {
+
+            if (value === null || value === undefined) return '""';
+
+            const stringValue = String(value).replace(/\r?\n/g, ' ');
+
+            return '"' + stringValue.replace(/"/g, '""') + '"';
+
+        };
+
+
+
+        const formatModels = (value) => {
+
+            if (!value) return '';
+
+            return value.split(',').map(item => item.trim()).filter(Boolean).join(', ');
+
+        };
+
+
+
+        const headerLine = columns.map(col => '"' + col.label + '"').join(delimiter);
+
+        const dataLines = rows.map(row => {
+
+            return columns.map(col => {
+
+                let cellValue = row[col.key];
+
+                if (col.key === 'models') {
+
+                    cellValue = formatModels(cellValue);
+
+                }
+
+                return escapeValue(cellValue);
+
+            }).join(delimiter);
+
+        });
+
+
+
+        const csvContent = [headerLine].concat(dataLines).join('\r\n');
+
+        const bomBuffer = Buffer.from([0xEF, 0xBB, 0xBF]);
+
+        const csvBuffer = Buffer.from(csvContent, 'utf8');
+
+
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+
+        const timestamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+
+        res.setHeader('Content-Disposition', `attachment; filename=bulgu-export-${timestamp}.csv`);
+
+        res.send(Buffer.concat([bomBuffer, csvBuffer]));
+
+    });
+
+});
+
+
+
 router.get('/bulgular', (req, res) => {
     const { vendorId, status, tip, searchTerm, page = 1, limit = 100 } = req.query;
     const offset = (page - 1) * limit;
@@ -228,27 +426,71 @@ router.post('/bulgular/import', async (req, res) => {
         const modelsMap = new Map(models.map(m => [m.name.toLowerCase(), m]));
         const versionsMap = new Map(versions.map(v => [`${v.vendorId}-${v.versionNumber.toLowerCase()}`, v.id]));
 
+        const cleanCell = (value) => {
+            if (value === undefined || value === null) return '';
+            const bomChar = String.fromCharCode(0xFEFF);
+            return String(value)
+                .replace(new RegExp('^' + bomChar), '')
+                .replace(/^"+|"+$/g, '')
+                .replace(/^'+|'+$/g, '')
+                .trim();
+        };
+
+        const getField = (record, key) => {
+            if (record[key] !== undefined && record[key] !== null) return record[key];
+            const bomChar = String.fromCharCode(0xFEFF);
+            const bomKey = bomChar + key;
+            return record[bomKey];
+        };
+
         for (let i = 0; i < records.length; i++) {
             const record = records[i];
             const rowIndex = i + 1;
 
             try {
+                const baslik = cleanCell(getField(record, 'Baslik'));
+                const vendorName = cleanCell(getField(record, 'Vendor'));
+                const bulguTipi = cleanCell(getField(record, 'Bulgu Tipi'));
+                const etkiSeviyesi = cleanCell(getField(record, 'Etki Seviyesi'));
+                const tespitTarihi = cleanCell(getField(record, 'Tespit Tarihi'));
+                const girenKisi = cleanCell(getField(record, 'Giren Kisi'));
+
                 const requiredFields = ['Baslik', 'Vendor', 'Bulgu Tipi', 'Etki Seviyesi', 'Tespit Tarihi', 'Giren Kisi'];
+                const requiredValues = {
+                    'Baslik': baslik,
+                    'Vendor': vendorName,
+                    'Bulgu Tipi': bulguTipi,
+                    'Etki Seviyesi': etkiSeviyesi,
+                    'Tespit Tarihi': tespitTarihi,
+                    'Giren Kisi': girenKisi
+                };
+
                 for (const field of requiredFields) {
-                    if (!record[field] || String(record[field]).trim() === '') throw new Error(`Zorunlu alan eksik: ${field}`);
+                    if (!requiredValues[field]) throw new Error(`Zorunlu alan eksik: ${field}`);
                 }
 
-                let vendorId = vendorsMap.get(String(record.Vendor).toLowerCase());
+                const detayliAciklama = cleanCell(getField(record, 'Detayli Aciklama'));
+                const vendorTrackerNo = cleanCell(getField(record, 'Vendor Takip No'));
+                const status = cleanCell(getField(record, 'Durum')) || 'A\u00E7\u0131k';
+                const cozumOnaylayanKisi = cleanCell(getField(record, 'Cozum Onaylayan Kisi'));
+                const cozumOnayTarihi = cleanCell(getField(record, 'Cozum Onay Tarihi'));
+
+                let vendorId = vendorsMap.get(vendorName.toLowerCase());
+
                 if (!vendorId) {
-                    const vendorName = String(record.Vendor).trim();
                     const slug = vendorName.toLowerCase().replace(/\s+/g, '-');
                     const newVendorResult = await dbRun('INSERT INTO Vendor (name, makeCode, slug) VALUES (?, ?, ?)', [vendorName, '-', slug]);
                     vendorId = newVendorResult.lastID;
                     vendorsMap.set(vendorName.toLowerCase(), vendorId);
                 }
 
-                const modelNames = String(record['Etkilenen Modeller'] || '').split(',').map(name => name.trim()).filter(Boolean);
+                const modelField = cleanCell(getField(record, 'Etkilenen Modeller'));
+                const normalizedModelField = modelField.replace(/^[([{]+/, '').replace(/[)\]}]+$/, '');
+                const modelNames = normalizedModelField
+                    ? normalizedModelField.split(/[,;]+/).map(name => cleanCell(name)).filter(Boolean)
+                    : [];
                 const modelIds = [];
+
                 if (modelNames.length > 0) {
                     for (const modelName of modelNames) {
                         let model = modelsMap.get(modelName.toLowerCase());
@@ -262,23 +504,22 @@ router.post('/bulgular/import', async (req, res) => {
                 }
 
                 let cozumVersiyonId = null;
-                const cozumVersiyonNumber = record['Cozum Beklenen Versiyon'];
+                const cozumVersiyonNumber = cleanCell(getField(record, 'Cozum Beklenen Versiyon'));
                 if (cozumVersiyonNumber) {
-                    const versionKey = `${vendorId}-${String(cozumVersiyonNumber).toLowerCase()}`;
+                    const versionKey = `${vendorId}-${cozumVersiyonNumber.toLowerCase()}`;
                     cozumVersiyonId = versionsMap.get(versionKey) || null;
                 }
-                
+
                 await dbRun('BEGIN TRANSACTION');
-                
+
                 const bulguSql = `
                     INSERT INTO Bulgu (baslik, bulguTipi, etkiSeviyesi, tespitTarihi, detayliAciklama, girenKullanici, vendorTrackerNo, status, cozumOnaylayanKullanici, cozumOnayTarihi, vendorId, cozumVersiyonId)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                
-                const status = record.Durum || 'AÃ§Ä±k';
+
                 const bulguParams = [
-                    record.Baslik, record['Bulgu Tipi'], record['Etki Seviyesi'], record['Tespit Tarihi'],
-                    record['Detayli Aciklama'] || null, record['Giren Kisi'], record['Vendor Takip No'] || null,
-                    status, record['Cozum Onaylayan Kisi'] || null, record['Cozum Onay Tarihi'] || null,
+                    baslik, bulguTipi, etkiSeviyesi, tespitTarihi,
+                    detayliAciklama || null, girenKisi, vendorTrackerNo || null,
+                    status, cozumOnaylayanKisi || null, cozumOnayTarihi || null,
                     vendorId, cozumVersiyonId
                 ];
 
@@ -305,6 +546,5 @@ router.post('/bulgular/import', async (req, res) => {
 });
 
 module.exports = router;
-
 
 

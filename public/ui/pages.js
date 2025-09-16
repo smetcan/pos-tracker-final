@@ -74,6 +74,7 @@
                 <p class="text-gray-500">Tüm program hatalarını ve yeni talepleri buradan yönetebilirsiniz. (${totalRecords || 0} kayıt)</p>
             </div>
             <div class="flex items-center gap-2">
+                <button id="bulgu-export-btn" class="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-md">Dışa Aktar (CSV)</button>
                 <button id="import-bulgu-btn" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md">İçeri Aktar</button>
                 <button id="add-bulgu-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Bulgu/Talep Ekle</button>
             </div>

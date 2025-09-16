@@ -652,8 +652,11 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = 
                 <div class="p-6">
                     <form id="bulgu-import-form" class="space-y-4">
                         <div>
-                            <label for="csv-file-input" class="block text-sm font-medium text-gray-700">CSV Dosyası Seçin</label>
-                            <input type="file" id="csv-file-input" accept=".csv" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+                            <label for="csv-file-input" class="block text-sm font-medium text-gray-700">CSV Dosyas&#305; Se&#231;in</label>
+                            <div class="mt-1 flex flex-col gap-2">
+                                <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+                                <a href="/bulgu_sablon.csv" download class="text-sm text-blue-600 hover:underline">&#350;ablon dosyas&#305;n&#305; indir</a>
+                            </div>
                         </div>
                         <div id="import-progress" class="hidden text-sm text-gray-600">
                             <p>Yükleniyor... <span id="progress-count">0</span>/<span id="total-records">0</span></p>
@@ -761,5 +764,4 @@ function getVersionModalHTML(vendors, models, version = {}) {
             </div>
         </div>`;
 }
-
 
