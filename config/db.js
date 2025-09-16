@@ -31,8 +31,47 @@ function runMigrations() {
                     else console.log('Added column vendorId to Bulgu');
                 });
             }
+            if (!cols.includes('cozumOnayAciklamasi')) {
+                db.run("ALTER TABLE Bulgu ADD COLUMN cozumOnayAciklamasi TEXT", (err) => {
+                    if (err) console.error('ALTER TABLE Bulgu ADD cozumOnayAciklamasi failed', err);
+                    else console.log('Added column cozumOnayAciklamasi to Bulgu');
+                });
+            }
+            if (!cols.includes('notlar')) {
+                db.run("ALTER TABLE Bulgu ADD COLUMN notlar TEXT", (err) => {
+                    if (err) console.error('ALTER TABLE Bulgu ADD notlar failed', err);
+                    else console.log('Added column notlar to Bulgu');
+                });
+            }
+        });
+
+        // Ensure unique indexes (attempt creation; if fails, log true duplicates)
+        db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_vendor_makecode_unique ON Vendor(makeCode)", (e2) => {
+            if (e2) {
+                console.error('Create unique index on Vendor(makeCode) failed, checking duplicates...', e2.message || e2);
+                db.all("SELECT makeCode, COUNT(*) AS cnt FROM Vendor WHERE makeCode IS NOT NULL AND TRIM(makeCode) != '' GROUP BY makeCode HAVING COUNT(*) > 1", [], (e3, dups) => {
+                    if (e3) return console.error('Vendor duplicate check failed', e3);
+                    if (Array.isArray(dups) && dups.length > 0) console.warn('Vendor.makeCode duplicates:', dups.map(d => `${d.makeCode} (x${d.cnt})`));
+                });
+            } else {
+                console.log('Ensured unique index on Vendor(makeCode)');
+            }
+        });
+
+        db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_model_code_unique ON Model(code)", (e2) => {
+            if (e2) {
+                console.error('Create unique index on Model(code) failed, checking duplicates...', e2.message || e2);
+                db.all("SELECT code, COUNT(*) AS cnt FROM Model WHERE code IS NOT NULL AND TRIM(code) != '' GROUP BY code HAVING COUNT(*) > 1", [], (e3, dups) => {
+                    if (e3) return console.error('Model duplicate check failed', e3);
+                    if (Array.isArray(dups) && dups.length > 0) console.warn('Model.code duplicates:', dups.map(d => `${d.code} (x${d.cnt})`));
+                });
+            } else {
+                console.log('Ensured unique index on Model(code)');
+            }
         });
     });
 }
 
 module.exports = db;
+// run migrations at startup
+try { runMigrations(); } catch (e) { console.error('Migrations failed', e); }

@@ -3,12 +3,26 @@ const db = require('../config/db');
 const router = express.Router();
 
 // --- YARDIMCI FONKSÄ°YON: GeÃ§miÅŸ kaydÄ± oluÅŸturur ---
+function normalizeTR(text) {
+    if (!text || typeof text !== 'string') return text;
+    const map = new Map([
+        ['Ã‡','Ç'], ['Ã–','Ö'], ['Ãœ','Ü'],
+        ['Ã§','ç'], ['Ã¶','ö'], ['Ã¼','ü'],
+        ['ÅŸ','þ'], ['Åz','Þ'],
+        ['Ä±','ý'], ['Ä°','Ý'],
+        ['ÄŸ','ð'], ['Äz','Ð']
+    ]);
+    let out = text;
+    for (const [bad, good] of map.entries()) out = out.split(bad).join(good);
+    return out;
+}
+
 function logHistory(bulguId, req, action, details = '') {
     return new Promise((resolve, reject) => {
         const userId = req.session.user.id;
         const userName = req.session.user.userName;
-        const sql = `INSERT INTO history (bulguId, userId, userName, action, details) VALUES (?, ?, ?, ?, ?)`;
-        db.run(sql, [bulguId, userId, userName, action, details], function(err) {
+        const sql = `INSERT INTO history (bulguId, userId, userName, action, details, timestamp) VALUES (?, ?, ?, ?, ?, datetime('now','localtime'))`;
+        db.run(sql, [bulguId, userId, userName, normalizeTR(action), normalizeTR(details)], function(err) {
             if (err) {
                 console.error('History log error:', err);
                 return reject(err);
@@ -104,7 +118,7 @@ router.get('/bulgular', (req, res) => {
 });
 
 router.post('/bulgular', (req, res) => {
-    const { baslik, modelIds, cozumVersiyonId, bulguTipi, etkiSeviyesi, tespitTarihi, detayliAciklama, girenKullanici, vendorTrackerNo, vendorId } = req.body;
+    const { baslik, modelIds, cozumVersiyonId, bulguTipi, etkiSeviyesi, tespitTarihi, detayliAciklama, notlar, girenKullanici, vendorTrackerNo, vendorId } = req.body;
     if (!baslik || !bulguTipi || !etkiSeviyesi || !tespitTarihi || !vendorId) return res.status(400).json({ error: 'BaÅŸlÄ±k, Vendor, Bulgu Tipi, Etki Seviyesi ve Tespit Tarihi zorunlu alanlardÄ±r.' });
     
     const bulguSql = `INSERT INTO Bulgu (baslik, bulguTipi, etkiSeviyesi, tespitTarihi, detayliAciklama, girenKullanici, vendorTrackerNo, cozumVersiyonId, status, vendorId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AÃ§Ä±k', ?)`;
@@ -144,9 +158,10 @@ router.put('/bulgular/:id', async (req, res) => {
         const bulguSql = `
             UPDATE Bulgu SET baslik = ?, bulguTipi = ?, etkiSeviyesi = ?, tespitTarihi = ?, status = ?,
                 detayliAciklama = ?, girenKullanici = ?, vendorTrackerNo = ?,
-                cozumOnaylayanKullanici = ?, cozumOnayTarihi = ?, cozumVersiyonId = ?, vendorId = ?
+                cozumOnaylayanKullanici = ?, cozumOnayTarihi = ?, cozumVersiyonId = ?, vendorId = ?,
+                cozumOnayAciklamasi = ?
             WHERE id = ?`;
-        const bulguParams = [newData.baslik, newData.bulguTipi, newData.etkiSeviyesi, newData.tespitTarihi, newData.status, newData.detayliAciklama, newData.girenKullanici, newData.vendorTrackerNo, newData.cozumOnaylayanKullanici, newData.cozumOnayTarihi, newData.cozumVersiyonId ? Number(newData.cozumVersiyonId) : null, newData.vendorId, id];
+        const bulguParams = [newData.baslik, newData.bulguTipi, newData.etkiSeviyesi, newData.tespitTarihi, newData.status, newData.detayliAciklama, newData.girenKullanici, newData.vendorTrackerNo, newData.cozumOnaylayanKullanici, newData.cozumOnayTarihi, newData.cozumVersiyonId ? Number(newData.cozumVersiyonId) : null, newData.vendorId, newData.cozumOnayAciklamasi || null, id];
         await new Promise((resolve, reject) => db.run(bulguSql, bulguParams, err => err ? reject(err) : resolve()));
 
         // 4. DeÄŸiÅŸiklikleri kontrol et ve geÃ§miÅŸe logla
@@ -290,3 +305,6 @@ router.post('/bulgular/import', async (req, res) => {
 });
 
 module.exports = router;
+
+
+

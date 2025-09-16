@@ -137,7 +137,7 @@ Bu bölüm, uygulamanın işlevselliğini ve kullanıcı deneyimini daha da art�
 ### Öncelik 1: Hemen Değer Katacak Özellikler
 
 
-- [ ] **Değişiklik Geçmişi (Audit Log)**
+- [x] **Değişiklik Geçmişi (Audit Log)**
   - **Açıklama:** Bulgu üzerinde yapılan her değişikliğin (durum değişkliği, alanların güncellenmesi, dosya eklenmesi vs.) tarihçesini tutmak.
   - **Teknik Adımlar:** Veritabanına `history` adında yeni tablolar eklemek. Backend'de bu tabloları yönetecek API'lar oluşturmak. Frontend'de bu verileri gösterecek arayüzleri tasarlamak.
 - [ ] **Kullanıcının Otomatik Yazılması**
