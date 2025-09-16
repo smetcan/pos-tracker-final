@@ -1,3 +1,27 @@
+
+    const actionEditIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.651 1.651a1.875 1.875 0 010 2.652l-8.955 8.955-4.478 1.126 1.126-4.478 8.955-8.955a1.875 1.875 0 012.651 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.125L16.862 4.487" />
+        </svg>
+    `;
+    const actionDeleteIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L5.772 5.79m13.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+        </svg>
+    `;
+
+    const actionContactIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15H19.5A1.5 1.5 0 0021 20.25v-2.25a1.5 1.5 0 00-1.28-1.482l-4.5-.75a1.5 1.5 0 00-1.69 1.086l-.45 1.8a11.25 11.25 0 01-6.365-6.365l1.8-.45a1.5 1.5 0 001.086-1.69l-.75-4.5A1.5 1.5 0 007.5 4.5H5.25A1.5 1.5 0 003.75 6v.75z" />
+        </svg>
+    `;
+    const actionResetIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V7.5a3.75 3.75 0 00-7.5 0V9m-3 0h13.5a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-9A1.5 1.5 0 015.25 9z" />
+        </svg>
+    `;
+
     function getDashboardHTML(stats) { 
         const { totalBulgular, openBulgular, testBulgular, closedBulgular, sonBulgular, openBulguByVendor } = stats;
         const statCards = `
@@ -135,9 +159,18 @@
     
     const vendorsTableRows = vendors.map(vendor => `
         <tr class="border-b"><td class="p-3 font-medium">${vendor.name}</td><td class="p-3">${vendor.makeCode}</td><td class="p-3 text-right">
-            <button class="open-contacts-btn px-2 py-1 mr-2 bg-gray-100 rounded text-sm text-gray-700" data-vendor-id="${vendor.id}">İletişim</button>
-            <button class="edit-vendor-btn p-1 text-sm text-blue-600" data-vendor-id="${vendor.id}">Düzenle</button>
-            <button class="delete-vendor-btn p-1 text-sm text-red-600" data-vendor-id="${vendor.id}" data-vendor-name="${vendor.name}">Sil</button>
+            <button type="button" class="open-contacts-btn inline-flex items-center justify-center mr-2 p-1 bg-gray-100 rounded text-gray-600 hover:text-gray-800 hover:bg-gray-200" data-vendor-id="${vendor.id}" aria-label="İletişim bilgilerini görüntüle">
+                ${actionContactIcon}
+                <span class="sr-only">İletişim</span>
+            </button>
+            <button type="button" class="edit-vendor-btn inline-flex items-center justify-center p-1 text-blue-600 hover:text-blue-800" data-vendor-id="${vendor.id}" aria-label="Vendor düzenle">
+                ${actionEditIcon}
+                <span class="sr-only">Düzenle</span>
+            </button>
+            <button type="button" class="delete-vendor-btn inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700" data-vendor-id="${vendor.id}" data-vendor-name="${vendor.name}" aria-label="Vendor sil">
+                ${actionDeleteIcon}
+                <span class="sr-only">Sil</span>
+            </button>
         </td></tr>`).join('');
         
     const modelsTableRows = models.map(model => `
@@ -148,8 +181,14 @@
             <td class="p-3 text-center">${boolToText(model.isAndroidPos)}</td>
             <td class="p-3 text-center">${boolToText(model.isOkcPos)}</td>
             <td class="p-3 text-right">
-                <button class="edit-model-btn p-1 text-sm text-blue-600" data-model-id="${model.id}">Düzenle</button>
-                <button class="delete-model-btn p-1 text-sm text-red-600" data-model-id="${model.id}" data-model-name="${model.name}">Sil</button>
+                <button type="button" class="edit-model-btn inline-flex items-center justify-center p-1 text-blue-600 hover:text-blue-800" data-model-id="${model.id}" aria-label="Model düzenle">
+                    ${actionEditIcon}
+                    <span class="sr-only">Düzenle</span>
+                </button>
+                <button type="button" class="delete-model-btn inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700" data-model-id="${model.id}" data-model-name="${model.name}" aria-label="Model sil">
+                    ${actionDeleteIcon}
+                    <span class="sr-only">Sil</span>
+                </button>
             </td>
         </tr>`).join('');
         
@@ -159,8 +198,14 @@
          <tr class="border-b"><td class="p-3 font-medium"><a href="#" class="view-version-link text-blue-600" data-version-id="${version.id}">${version.versionNumber}</a></td><td class="p-3">${version.vendorName}</td><td class="p-3">${version.deliveryDate}</td><td class="p-3 text-xs text-gray-600">${version.models || ''}</td>
             <td class="p-3"><span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${version.status}</span></td><td class="p-3">${version.prodOnayDate || '-'}</td>
             <td class="p-3 text-right">
-                <button class="edit-version-btn p-1 text-sm text-blue-600" data-version-id="${version.id}">Düzenle</button>
-                <button class="delete-version-btn p-1 text-sm text-red-600" data-version-id="${version.id}" data-version-number="${version.versionNumber}">Sil</button>
+                <button type="button" class="edit-version-btn inline-flex items-center justify-center p-1 text-blue-600 hover:text-blue-800" data-version-id="${version.id}" aria-label="Versiyon düzenle">
+                    ${actionEditIcon}
+                    <span class="sr-only">Düzenle</span>
+                </button>
+                <button type="button" class="delete-version-btn inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700" data-version-id="${version.id}" data-version-number="${version.versionNumber}" aria-label="Versiyon sil">
+                    ${actionDeleteIcon}
+                    <span class="sr-only">Sil</span>
+                </button>
             </td></tr>`;
     }).join('');
 
@@ -170,8 +215,18 @@
             <td class="p-3">${user.name} ${user.surname}</td>
             <td class="p-3">${user.email || ''}</td>
             <td class="p-3 text-right">
-                <button class="reset-password-btn p-1 text-sm text-blue-600" data-user-id="${user.id}" data-user-name="${user.userName}">Şifre Sıfırla</button>
-                <button class="delete-user-btn p-1 text-sm text-red-600" data-user-id="${user.id}" data-user-name="${user.userName}">Sil</button>
+                <button type="button" class="edit-user-btn inline-flex items-center justify-center p-1 text-blue-600 hover:text-blue-800 mr-1" data-user-id="${user.id}" data-user-name="${user.userName}" aria-label="Kullanıcı düzenle">
+                    ${actionEditIcon}
+                    <span class="sr-only">Düzenle</span>
+                </button>
+                <button type="button" class="reset-password-btn inline-flex items-center justify-center p-1 text-blue-600 hover:text-blue-800 mr-1" data-user-id="${user.id}" data-user-name="${user.userName}" aria-label="Şifre sıfırla">
+                    ${actionResetIcon}
+                    <span class="sr-only">Şifre Sıfırla</span>
+                </button>
+                <button type="button" class="delete-user-btn inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700" data-user-id="${user.id}" data-user-name="${user.userName}" aria-label="Kullanıcı sil">
+                    ${actionDeleteIcon}
+                    <span class="sr-only">Sil</span>
+                </button>
             </td>
         </tr>
     `).join('');
