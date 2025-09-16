@@ -127,33 +127,19 @@ Bu bölüm, uygulama büyüdükçe yönetimi zorlaşan `server.js` ve `script.js
     - Ana `script.js` dosyasında `import` anahtar kelimesi ile bu fonksiyonları içeri aktar.
     - `index.html` dosyasındaki `<script src="script.js">` etiketine `type="module"` özelliğini ekle.
 
-
-  ### Yapılacaklar Listesi (To-Do)
-
-  ## Bölüm 3: Yeni Özellik Önerileri (Gelecek Geliştirmeler)
-
-Bu bölüm, uygulamanın işlevselliğini ve kullanıcı deneyimini daha da artırmak için eklenebilecek yeni özellikleri listeler.
-
-### Öncelik 1: Hemen Değer Katacak Özellikler
-
-
-- [x] **Değişiklik Geçmişi (Audit Log)**
+    - [x] **Değişiklik Geçmişi (Audit Log)**
   - **Açıklama:** Bulgu üzerinde yapılan her değişikliğin (durum değişkliği, alanların güncellenmesi, dosya eklenmesi vs.) tarihçesini tutmak.
   - **Teknik Adımlar:** Veritabanına `history` adında yeni tablolar eklemek. Backend'de bu tabloları yönetecek API'lar oluşturmak. Frontend'de bu verileri gösterecek arayüzleri tasarlamak.
-- [ ] **Kullanıcının Otomatik Yazılması**
+- [x] **Kullanıcının Otomatik Yazılması**
   - **Açıklama:** Yeni Bulgu/Talep Ekle ve  Bulgu/Talep Düzenle ekranlarındaki Giren Kullanıcı ve ÇÖzüm Onaylayan Kullanıcı değerlerinin sisteme giriş yapmış kullanıcı adı ve soyadı ile otomatik dolması. Zaten eklenmiş olan kayıtlar ve import ederken eklenen ve sistemde olmayan kullanıcılar kalacak.
 
-### Öncelik 2: Veri ve Raporlama İyileştirmeleri
-
-- [ ] **Gelişmiş Dashboard ve Filtreleme**
-  - **Açıklama:** Ana sayfadaki dashboard'a "Son 30 gün", "Bu Yıl" gibi tarih aralığı filtreleri eklemek. Grafiklerin üzerine tıklandığında ilgili detay sayfasına yönlendirme yapmak.
-  - **Teknik Adımlar:** Backend API'larını tarih parametreleri alacak şekilde güncellemek. Frontend'de `Chart.js`'in tıklama olaylarını kullanarak yönlendirmeleri yapmak.
-
-- [ ] **Veriyi Dışa Aktarma (Export to CSV/Excel)**
+- [x] **Veriyi Dışa Aktarma (Export to CSV/Excel)**
   - **Açıklama:** "Bulgu Takibi" sayfasındaki filtrelenmiş listeyi bir "Dışa Aktar" butonuyla CSV dosyası olarak indirebilme özelliği.
   - **Teknik Adımlar:** Backend'de `/api/bulgular/export` gibi yeni bir API endpoint'i oluşturmak. Bu endpoint'in veriyi CSV formatına çevirip tarayıcıya göndermesini sağlamak.
 
-### Öncelik 3: Yapısal ve Güvenlik Geliştirmeleri
+  ### Yapılacaklar Listesi (To-Do)
+  
+  ## Öncelik 3: Yapısal ve Güvenlik Geliştirmeleri
 
 - [ ] **Kullanıcı Rolleri ve Yetkilendirme (Admin, User)**
   - **Açıklama:** Uygulamada "Admin" ve "Normal Kullanıcı" gibi roller tanımlamak. Sadece Admin yetkisine sahip kullanıcıların yeni kullanıcı ekleyebilmesi, vendor/model silebilmesi gibi yetki kontrolleri eklemek.
