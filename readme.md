@@ -77,74 +77,143 @@ curl -X POST http://localhost:3000/api/bulgular \
 - 409: UNIQUE veya foreign key ihlali (Ã¶r. vendor adÄ±/slug tekrarlarÄ± veya silme sÄ±rasÄ±nda baÄŸlÄ± kayÄ±tlar)
 - 500: Sunucu/DB hatalarÄ±
 
-## VeritabanÄ± ÅŸemasÄ± (CREATE TABLE Ã¶rnekleri)
-
-AÅŸaÄŸÄ±daki ÅŸema `server.js` iÃ§indeki sorgulara gÃ¶re Ã§Ä±karÄ±lmÄ±ÅŸtÄ±r. Bu SQL'leri kullanarak boÅŸ `dev.db` oluÅŸturabilirsiniz.
-
-```sql
-CREATE TABLE Vendor (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    makeCode TEXT,
-    slug TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE Model (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    code TEXT,
-    vendorId INTEGER NOT NULL,
-    isTechpos INTEGER DEFAULT 0,
-    isAndroidPos INTEGER DEFAULT 0,
-    isOkcPos INTEGER DEFAULT 0,
-    FOREIGN KEY(vendorId) REFERENCES Vendor(id)
-);
-
-CREATE TABLE AppVersion (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    versionNumber TEXT NOT NULL,
-    vendorId INTEGER NOT NULL,
-    deliveryDate TEXT,
-    status TEXT,
-    prodOnayDate TEXT,
-    FOREIGN KEY(vendorId) REFERENCES Vendor(id)
-);
-
-CREATE TABLE VersionModel (
-    versionId INTEGER NOT NULL,
-    modelId INTEGER NOT NULL,
-    PRIMARY KEY(versionId, modelId),
-    FOREIGN KEY(versionId) REFERENCES AppVersion(id),
-    FOREIGN KEY(modelId) REFERENCES Model(id)
-);
-
-CREATE TABLE Bulgu (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    baslik TEXT NOT NULL,
-    bulguTipi TEXT,
-    etkiSeviyesi TEXT,
-    tespitTarihi TEXT,
-    detayliAciklama TEXT,
-    girenKullanici TEXT,
-    vendorTrackerNo TEXT,
-    cozumVersiyonId INTEGER,
-    status TEXT DEFAULT 'AÃ§Ä±k',
-    cozumOnaylayanKullanici TEXT,
-    cozumOnayTarihi TEXT,
-    FOREIGN KEY(cozumVersiyonId) REFERENCES AppVersion(id)
-);
-
-CREATE TABLE BulguModel (
-    bulguId INTEGER NOT NULL,
-    modelId INTEGER NOT NULL,
-    PRIMARY KEY(bulguId, modelId),
-    FOREIGN KEY(bulguId) REFERENCES Bulgu(id),
-    FOREIGN KEY(modelId) REFERENCES Model(id)
-);
-```
-
-Not: Sunucu bazÄ± GET sorgularÄ±nda GROUP_CONCAT kullanÄ±r ve iliÅŸkili `models` veya `modelIds` alanlarÄ±nÄ± virgÃ¼lle ayrÄ±lmÄ±ÅŸ string olarak dÃ¶ner. Frontend bu formatÄ± bazen gÃ¶sterim iÃ§in, bazen de dÃ¼zenleme iÃ§in kullanÄ±r.
-
+## Veritabaný þemasý
+
+POS takip verileri altý ana tablonun etrafýnda toplanýr. Vendor ve AppVersion tablolarý tedarikçi tarafýný, Model tablosu donaným cihazlarýný, Bulgu tablosu ise bu cihazlardaki yazýlýmsal sorun ve talepleri temsil eder. VersionModel ve BulguModel yardýmcý tablolarý iliþkileri çoktan çoða derinleþtirir.
+
+```
+Tablo          Amaç                                              Kritik Alanlar
+-------------- ------------------------------------------------- ----------------------------------
+Vendor         Üretici firma kayýtlarý                           name, slug (benzersiz)
+Model          Vendor tabanlý cihaz/modeller                     vendorId, isTechpos/isAndroidPos/isOkcPos bayraklarý
+AppVersion     Vendor versiyon yaþam döngüsü                     versionNumber, status, prodOnayDate
+VersionModel   Versiyon-model çoktan çoða eþlemesi               versionId + modelId (PK)
+Bulgu          Bulgular, hata ve talepler                        baslik, status, cozumVersiyonId (opsiyonel)
+BulguModel     Bulgu-model çoktan çoða eþlemesi                  bulguId + modelId (PK)
+```
+
+### Tablo detaylarý
+
+**Vendor**
+- `id`: Otomatik artan benzersiz kimlik.
+- `name`: Vendor adý; benzersizdir ve UI katmanýnda gösterilir.
+- `makeCode`: Vendor için raporlama kodu.
+- `slug`: JSON dostu benzersiz kýsa ad.
+
+**Model**
+- `vendorId`: Modele ait vendor kaydýný iþaret eder.
+- `code`: Vendor içindeki model kodu (opsiyonel).
+- `isTechpos`, `isAndroidPos`, `isOkcPos`: Frontend filtreleri için kullanýlan boolean bayraklar, SQLite içinde 0/1 olarak saklanýr.
+
+**AppVersion**
+- `vendorId`: Versiyonun hangi vendor ile iliþkili olduðunu gösterir.
+- `versionNumber`: Versiyon etiketi (örnek deðer: v2.3.1).
+- `deliveryDate`, `prodOnayDate`: Teslim ve üretim onayý tarihleri gibi süreç metrikleri.
+- `status`: Versiyonun iþ akýþýndaki durumu.
+
+**VersionModel**
+- `versionId` ve `modelId`: Ayný versiyon birden fazla modele baðlanabildiði için çoktan çoða köprü oluþturur.
+
+**Bulgu**
+- `baslik`, `detayliAciklama`: Bulgunun kýsa baþlýðý ve opsiyonel açýklama metni.
+- `bulguTipi`, `etkiSeviyesi`: Sýnýflandýrma alanlarý; frontend seçim kutularýný besler.
+- `girenKullanici`: Kaydý oluþturan kullanýcý adý.
+- `vendorTrackerNo`: Vendor tarafýndan verilen referans numarasý.
+- `cozumVersiyonId`: Bulgunun hangi versiyon ile kapatýldýðýný gösteren opsiyonel foreign key.
+- `status`: Varsayýlan deðer `Açýk`; süreçte Kapalý gibi farklý durumlara güncellenir.
+- `cozumOnaylayanKullanici`, `cozumOnayTarihi`: Çözüm onay süreci bilgileri.
+
+**BulguModel**
+- Bir bulgunun etkilendiði modelleri tutan çoktan çoða köprü tablosu.
+
+### Ýliþki diyagramý (metin)
+
+```
+Vendor (1) -> Model (n)
+Vendor (1) -> AppVersion (n)
+AppVersion (n) <-> Model (n)    via VersionModel
+Bulgu (n) <-> Model (n)         via BulguModel
+Bulgu (n) -> AppVersion (1)     cozumVersiyonId (opsiyonel)
+```
+
+### Veri bütünlüðü ve indeksler
+
+- `Vendor.name` ve `Vendor.slug` UNIQUE kýsýtlarý çakýþmalarý engeller.
+- `Model.vendorId`, `AppVersion.vendorId`, `VersionModel.versionId`/`modelId` ve `BulguModel.bulguId`/`modelId` foreign key ile korunur; `server.js` tarafýnda transaction kullanýmý iliþkili kayýtlarýn tutarlý kalmasýný saðlar.
+- Çoktan çoða tablolarda birleþik PRIMARY KEY, ayný kombinasyonlarýn ikinci kez eklenmesini engeller.
+- Boolean nitelikler (`isTechpos` vb.) integer olarak tutulur; 0 deðeri false, 1 deðeri true anlamýna gelir.
+- Performans için `Model.vendorId`, `VersionModel.versionId` ve `BulguModel.bulguId` üzerinde indeksler önerilir; `dev.db` örnek veritabanýnda bu indeksler hazýr durumdadýr.
+
+### CREATE TABLE referansý
+
+Aþaðýdaki SQL komutlarý boþ bir veritabaný dosyasýný oluþturmak için kullanýlabilir.
+
+```sql
+CREATE TABLE Vendor (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    makeCode TEXT,
+    slug TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE Model (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    code TEXT,
+    vendorId INTEGER NOT NULL,
+    isTechpos INTEGER DEFAULT 0,
+    isAndroidPos INTEGER DEFAULT 0,
+    isOkcPos INTEGER DEFAULT 0,
+    FOREIGN KEY(vendorId) REFERENCES Vendor(id)
+);
+
+CREATE TABLE AppVersion (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    versionNumber TEXT NOT NULL,
+    vendorId INTEGER NOT NULL,
+    deliveryDate TEXT,
+    status TEXT,
+    prodOnayDate TEXT,
+    FOREIGN KEY(vendorId) REFERENCES Vendor(id)
+);
+
+CREATE TABLE VersionModel (
+    versionId INTEGER NOT NULL,
+    modelId INTEGER NOT NULL,
+    PRIMARY KEY(versionId, modelId),
+    FOREIGN KEY(versionId) REFERENCES AppVersion(id),
+    FOREIGN KEY(modelId) REFERENCES Model(id)
+);
+
+CREATE TABLE Bulgu (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    baslik TEXT NOT NULL,
+    bulguTipi TEXT,
+    etkiSeviyesi TEXT,
+    tespitTarihi TEXT,
+    detayliAciklama TEXT,
+    girenKullanici TEXT,
+    vendorTrackerNo TEXT,
+    cozumVersiyonId INTEGER,
+    status TEXT DEFAULT 'Açýk',
+    cozumOnaylayanKullanici TEXT,
+    cozumOnayTarihi TEXT,
+    FOREIGN KEY(cozumVersiyonId) REFERENCES AppVersion(id)
+);
+
+CREATE TABLE BulguModel (
+    bulguId INTEGER NOT NULL,
+    modelId INTEGER NOT NULL,
+    PRIMARY KEY(bulguId, modelId),
+    FOREIGN KEY(bulguId) REFERENCES Bulgu(id),
+    FOREIGN KEY(modelId) REFERENCES Model(id)
+);
+```
+
+### Ek notlar
+
+- Sunucu tarafýnda bazý GET sorgularý `GROUP_CONCAT` ile iliþkili modelleri virgülle ayýrarak döner; frontend bu formatý hem liste göstermede hem de form doldurmada kullanýr.
+
 ## GeliÅŸtirme notlarÄ± & proje Ã¶zgÃ¼ gotchalar
 
 - `dev.db` dosyasÄ± repository iÃ§inde yer alÄ±yorsa, Windows'ta aÃ§Ä±k dosya kilitleri nedeniyle `git merge` veya `git checkout` sÄ±rasÄ±nda "unable to unlink old 'dev.db'" gibi hatalar alabilirsiniz. Ã‡Ã¶zÃ¼m adÄ±mlarÄ±:
