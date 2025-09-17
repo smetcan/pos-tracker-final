@@ -210,12 +210,15 @@ function attachVersionModalListeners(version = null) {
             return;
         }
         
-        modelsContainer.innerHTML = filteredModels.map(m => `
+        modelsContainer.innerHTML = filteredModels.map(m => {
+            const displayName = m.code ? `${m.name} (${m.code})` : m.name;
+            return `
             <div class="flex items-center">
                 <input type="checkbox" id="model-${m.id}" value="${m.id}" name="modelIds" class="h-4 w-4 rounded border-gray-300 model-checkbox">
-                <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+                <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${displayName}</label>
             </div>
-        `).join('');
+        `;
+        }).join('');
     };
 
     vendorSelect.addEventListener('change', updateModelsListForVendor);
@@ -327,12 +330,13 @@ function attachBulguModalListeners(bulgu = {}, attachments = []) {
             ? (typeof bulgu.models === 'string' ? bulgu.models.split(',').map(s => s.trim()) : bulgu.models)
             : [];
         modelsContainer.innerHTML = filteredModels.map(m => {
+            const displayName = m.code ? `${m.name} (${m.code})` : m.name;
             const isChecked = (selectedIds && selectedIds.map(String).includes(String(m.id))) ||
                               (selectedNames && selectedNames.includes(m.name));
             return `
             <div class="flex items-center">
                 <input type="checkbox" id="model-${m.id}" value="${m.id}" class="model-checkbox h-4 w-4 rounded border-gray-300" ${isChecked ? 'checked' : ''}>
-                <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+                <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${displayName}</label>
             </div>`;
         }).join('');
     };

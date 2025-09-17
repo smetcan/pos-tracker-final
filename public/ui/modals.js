@@ -451,12 +451,15 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = 
     const etkiSeviyesiOptions = ['Düşük', 'Orta', 'Yüksek'].map(e => `<option value="${e}" ${bulgu.etkiSeviyesi === e ? 'selected' : ''}>${e}</option>`).join('');
 
     const filteredModels = isEdit ? models.filter(m => m.vendorId == selectedVendorId) : [];
-    const modelCheckboxesHTML = filteredModels.map(m => `
+    const modelCheckboxesHTML = filteredModels.map(m => {
+        const displayName = m.code ? `${m.name} (${m.code})` : m.name;
+        return `
         <div class="flex items-center">
             <input type="checkbox" id="model-${m.id}" value="${m.id}" class="h-4 w-4 rounded border-gray-300 model-checkbox" ${selectedModelIds.includes(String(m.id)) ? 'checked' : ''}>
-            <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+            <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${displayName}</label>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
     const attachmentsHtml = attachments.map(att => `
         <div class="flex items-center justify-between text-sm py-1" id="attachment-${att.id}">
@@ -761,12 +764,15 @@ function getVersionModalHTML(vendors, models, version = {}) {
 
     const filteredModels = isEdit ? models.filter(m => m.vendorId == version.vendorId) : [];
 
-    const modelCheckboxesHTML = filteredModels.map(m => `
+    const modelCheckboxesHTML = filteredModels.map(m => {
+        const displayName = m.code ? `${m.name} (${m.code})` : m.name;
+        return `
         <div class="flex items-center">
             <input type="checkbox" id="model-${m.id}" value="${m.id}" name="modelIds" class="h-4 w-4 rounded border-gray-300 model-checkbox" ${selectedModelIds.includes(String(m.id)) ? 'checked' : ''}>
-            <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${m.name}</label>
+            <label for="model-${m.id}" class="ml-2 block text-sm text-gray-900">${displayName}</label>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
     const statusOptions = ['Test', 'Prod'].map(s => `<option value="${s}" ${version.status === s ? 'selected' : ''}>${s}</option>`).join('');
 
