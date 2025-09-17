@@ -16,6 +16,7 @@ const bulguRoutes = require('./routes/bulgular');
 const notlarRoutes = require('./routes/notlar');
 const attachmentRoutes = require('./routes/attachments');
 const dashboardRoutes = require('./routes/dashboard');
+const functionsRoutes = require('./routes/functions');
 
 // Middleware
 const { isAuthenticated } = require('./middleware/auth');
@@ -63,6 +64,7 @@ app.use('/api', bulguRoutes);
 app.use('/api', notlarRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api', functionsRoutes);
 
 // Ana Sayfa Yönlendirmesi
 app.get('/', (req, res) => {

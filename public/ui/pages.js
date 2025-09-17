@@ -22,6 +22,122 @@
         </svg>
     `;
 
+    const actionSupportIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    `;
+
+    function getFunctionSupportTreeHTML(treeData = []) {
+        if (!Array.isArray(treeData) || treeData.length === 0) {
+            return '<p class="text-sm text-gray-500">Henüz fonksiyon desteği kaydı yok.</p>';
+        }
+        return treeData.map(fn => {
+            const vendorDetailsHtml = (fn.vendors || []).map(vendor => {
+                const modelDetailsHtml = (vendor.models || []).map(model => {
+                    const versionItems = (model.versions || []).map(version => {
+                        const versionMeta = [version.prodOnayDate].filter(Boolean).join(' - ');
+                        return `<li class="flex items-start gap-2"><span class="font-medium text-gray-700">Versiyon: ${version.versionNumber}</span>${versionMeta ? `<span class="text-xs text-gray-500 mt-0.5">${versionMeta}</span>` : ''}</li>`;
+                    }).join('') || '<li class="text-xs text-gray-500">Versiyon bulunmuyor.</li>';
+                    return `<details class="ml-4 pl-4 border-l border-gray-200 py-1" open>
+                                <summary class="cursor-pointer text-sm font-medium text-gray-700">Model: ${model.name}</summary>
+                                <ul class="mt-1 space-y-1 text-sm text-gray-600">${versionItems}</ul>
+                            </details>`;
+                }).join('') || '<p class="ml-4 text-sm text-gray-500">Model bilgisi bulunmuyor.</p>';
+
+                const modelCount = (vendor.models || []).length;
+                const versionCount = (vendor.models || []).reduce((total, m) => total + ((m.versions || []).length), 0);
+                const metaParts = [];
+                if (modelCount) metaParts.push(`${modelCount} model`);
+                if (versionCount) metaParts.push(`${versionCount} versiyon`);
+
+                return `<details class="mt-2 border border-gray-200 rounded-md bg-gray-50 py-2" open>
+                            <summary class="cursor-pointer px-3 text-sm font-semibold text-gray-800 flex items-center justify-between">
+                                <span>${vendor.name}</span>
+                                ${metaParts.length ? `<span class="text-xs text-gray-500">${metaParts.join(' - ')}</span>` : ''}
+                            </summary>
+                            <div class="px-3 pb-2">${modelDetailsHtml}</div>
+                        </details>`;
+            }).join('') || '<p class="text-sm text-gray-500">Bu fonksiyon için vendor bilgisi bulunmuyor.</p>';
+
+            return `<details class="function-tree-item border border-gray-200 rounded-md mb-3" open>
+                        <summary class="cursor-pointer px-4 py-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                            <span class="text-base font-semibold text-gray-900">${fn.name}</span>
+                            ${fn.description ? `<span class="text-sm text-gray-500 md:max-w-xl">${fn.description}</span>` : ''}
+                        </summary>
+                        <div class="px-4 pb-4">${vendorDetailsHtml}</div>
+                    </details>`;
+        }).join('');
+    }
+
+    function getFunctionSupportMatrixHTML(matrixData = { columns: [], rows: [] }) {
+        const { columns = [], rows = [] } = matrixData || {};
+        if (!columns.length || !rows.length) {
+            return '<p class="text-sm text-gray-500">Matriste gösterilecek kayıt bulunmuyor.</p>';
+        }
+        const headerCells = columns.map(fn => `<th class="p-3 text-left text-xs font-semibold text-gray-600" title="${fn.description || ''}">${fn.name}</th>`).join('');
+        const rowsHtml = rows.map(row => {
+            const infoCells = `<td class="p-3 text-sm text-gray-700">${row.vendorName || '-'}</td>` +
+                `<td class="p-3 text-sm text-gray-700">${row.modelName || '-'}</td>` +
+                `<td class="p-3 text-sm text-gray-700">${row.versionNumber || '-'}</td>`;
+            const supportCells = (row.cells || []).map(supported => supported
+                ? `<td class="p-2 text-center">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        </span>
+                        <span class="sr-only">Destekleniyor</span>
+                    </td>`
+                : `<td class="p-2 text-center">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-600" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </span>
+                        <span class="sr-only">Desteklenmiyor</span>
+                    </td>`
+            ).join('');
+            return `<tr class="border-b last:border-0">${infoCells}${supportCells}</tr>`;
+        }).join('');
+        return `<div class="overflow-x-auto">
+            <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                <thead class="bg-gray-50">
+                    <tr class="border-b">
+                        <th class="p-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
+                        <th class="p-3 text-left text-xs font-semibold text-gray-600">Model</th>
+                        <th class="p-3 text-left text-xs font-semibold text-gray-600">Versiyon</th>
+                        ${headerCells}
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        </div>`;
+    }
+
+    function getFunctionSupportPageHTML(treeData = [], matrixData = { columns: [], rows: [] }, activeView = 'tree') {
+        const treeHtml = getFunctionSupportTreeHTML(treeData);
+        const matrixHtml = getFunctionSupportMatrixHTML(matrixData);
+        return `
+        <div class="flex flex-col gap-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                    <h1 class="text-3xl font-bold">Fonksiyon Desteği</h1>
+                    <p class="text-sm text-gray-500">Fonksiyonların vendor, model ve versiyon bazındaki destek durumunu inceleyin.</p>
+                </div>
+                <div class="inline-flex rounded-md border bg-white shadow-sm" role="group">
+                    <button type="button" class="function-support-view-btn px-4 py-2 text-sm font-medium border-r last:border-r-0 ${activeView === 'tree' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:text-gray-800'}" data-view="tree">Hiyerarşi</button>
+                    <button type="button" class="function-support-view-btn px-4 py-2 text-sm font-medium ${activeView === 'matrix' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:text-gray-800'}" data-view="matrix">Matris</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                ${activeView === 'tree' ? `<div class="space-y-3 function-support-tree">${treeHtml}</div>` : matrixHtml}
+            </div>
+        </div>`;
+    }
+
+
+
     function getDashboardHTML(stats) { 
         const { totalBulgular, openBulgular, testBulgular, closedBulgular, sonBulgular, openBulguByVendor } = stats;
         const statCards = `
@@ -153,7 +269,7 @@
         `;
     }
 
-        function getYonetimHTML(vendors, models, versions, users, activeTab) { // "users" parametresi eklendi
+        function getYonetimHTML(vendors, models, versions, users, functions, activeTab) { // "users" parametresi eklendi
     const getSortIcon = (sortState, key) => (sortState.key !== key) ? '<span>&nbsp;</span>' : (sortState.direction === 'asc' ? '▲' : '▼');
     const boolToText = (value) => value ? 'Evet' : 'Hayır';
     
@@ -231,6 +347,27 @@
         </tr>
     `).join('');
 
+    const functionsTableRows = functions.length > 0 ? functions.map(fn => `
+        <tr class="border-b">
+            <td class="p-3 font-medium">${fn.name}</td>
+            <td class="p-3 text-sm text-gray-600">${fn.description ? fn.description : ''}</td>
+            <td class="p-3 text-right">
+                <button type="button" class="manage-support-btn inline-flex items-center justify-center p-1 text-emerald-600 hover:text-emerald-700 mr-1" data-function-id="${fn.id}" data-function-name="${fn.name}" aria-label="Fonksiyon desteğini yönet">
+                    ${actionSupportIcon}
+                    <span class="sr-only">Desteği Yönet</span>
+                </button>
+                <button type="button" class="edit-function-btn inline-flex items-center justify-center p-1 text-blue-600 hover:text-blue-800 mr-1" data-function-id="${fn.id}" aria-label="Fonksiyon düzenle">
+                    ${actionEditIcon}
+                    <span class="sr-only">Düzenle</span>
+                </button>
+                <button type="button" class="delete-function-btn inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700" data-function-id="${fn.id}" data-function-name="${fn.name}" aria-label="Fonksiyon sil">
+                    ${actionDeleteIcon}
+                    <span class="sr-only">Sil</span>
+                </button>
+            </td>
+        </tr>
+    `).join('') : '<tr><td class="p-4 text-sm text-gray-500 text-center" colspan="3">Henüz fonksiyon tanımı yok.</td></tr>';
+
     const modelFilterBarHTML = `
         <div class="flex flex-wrap items-center gap-2 mb-4 p-4 border rounded-md bg-gray-50">
             <input id="model-search-input" type="text" placeholder="Model adı/kodu ara..." class="flex-grow px-3 py-2 text-sm border border-gray-300 rounded-md" style="min-width: 200px;">
@@ -258,23 +395,24 @@
                 <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'vendors' ? 'active' : ''}" data-tab="vendors">Vendorlar</button>
                 <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'models' ? 'active' : ''}" data-tab="models">Modeller</button>
                 <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'versions' ? 'active' : ''}" data-tab="versions">Versiyonlar</button>
+                <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'functions' ? 'active' : ''}" data-tab="functions">Fonksiyonlar</button>
                 <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users' ? 'active' : ''}" data-tab="users">Kullanıcılar</button>
             </nav></div>
             <div class="p-6">
                 <div id="vendors-tab" class="tab-content ${activeTab === 'vendors' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Vendor Tanımları</h2><button id="add-vendor-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Vendor Ekle</button></div>
                     <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
-                        <th class="p-3 text-left sortable-header" data-table="vendors" data-sort-key="name">Vendor Adı ${getSortIcon(vendorSort, 'name')}</th>
-                        <th class="p-3 text-left sortable-header" data-table="vendors" data-sort-key="makeCode">Vendor Kodu ${getSortIcon(vendorSort, 'makeCode')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="vendors" data-sort-key="name">Vendor Adı ${getSortIcon(vendorSort, 'name')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="vendors" data-sort-key="makeCode">Vendor Kodu ${getSortIcon(vendorSort, 'makeCode')}</th>
                         <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${vendorsTableRows}</tbody></table></div>
                 </div>
                 <div id="models-tab" class="tab-content ${activeTab === 'models' ? 'active' : ''}">
                      <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Model Tanımları</h2><button id="add-model-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Model Ekle</button></div>
                      ${modelFilterBarHTML}
                     <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
-                        <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="name">Model Adı ${getSortIcon(modelSort, 'name')}</th>
-                        <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="code">Model Kodu ${getSortIcon(modelSort, 'code')}</th>
-                        <th class="p-3 text-left sortable-header" data-table="models" data-sort-key="vendorName">Vendor ${getSortIcon(modelSort, 'vendorName')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="models" data-sort-key="name">Model Adı ${getSortIcon(modelSort, 'name')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="models" data-sort-key="code">Model Kodu ${getSortIcon(modelSort, 'code')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="models" data-sort-key="vendorName">Vendor ${getSortIcon(modelSort, 'vendorName')}</th>
                         <th class="p-3 text-center">TechPOS</th>
                         <th class="p-3 text-center">Android</th>
                         <th class="p-3 text-center">ÖKC</th>
@@ -283,10 +421,19 @@
                 <div id="versions-tab" class="tab-content ${activeTab === 'versions' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Versiyon Tanımları</h2><button id="add-version-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Versiyon Ekle</button></div>
                     <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
-                        <th class="p-3 text-left">Versiyon No</th><th class="p-3 text-left">Vendor</th><th class="p-3 text-left">Teslim Tarihi</th><th class="p-3 text-left">Geçerli Modeller</th>
-                        <th class="p-3 text-left">Durum</th><th class="p-3 text-left">Prod Onay Tarihi</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="versionNumber">Versiyon No ${getSortIcon(versionSort, 'versionNumber')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="vendorName">Vendor ${getSortIcon(versionSort, 'vendorName')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="deliveryDate">Teslim Tarihi ${getSortIcon(versionSort, 'deliveryDate')}</th>
+                        <th class="p-3 text-left">Geçerli Modeller</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="status">Durum ${getSortIcon(versionSort, 'status')}</th>
+                        <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="prodOnayDate">Prod Onay Tarihi ${getSortIcon(versionSort, 'prodOnayDate')}</th>
                         <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${versionsTableRows}</tbody></table></div>
                 </div>
+                <div id="functions-tab" class="tab-content ${activeTab === 'functions' ? 'active' : ''}">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Fonksiyon Tanımları</h2><button id="add-function-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Fonksiyon Ekle</button></div>
+                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b"><th class="p-3 text-left">Fonksiyon Adı</th><th class="p-3 text-left">Açıklama</th><th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${functionsTableRows}</tbody></table></div>
+                </div>
+
                 <div id="users-tab" class="tab-content ${activeTab === 'users' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Kullanıcı Yönetimi</h2><button id="add-user-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Kullanıcı Ekle</button></div>
                     <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">

@@ -60,12 +60,23 @@ async function main() {
                 attachBulgularEventListeners(bulgularData);
             } else if (hash === '#/yonetim') {
                 navLinks.yonetim.classList.add('active');
-                const [vendors, models, versions, users] = await Promise.all([
-                    apiRequest('/api/vendors'), apiRequest('/api/models'), apiRequest('/api/versions'), apiRequest('/api/users')
+                const [vendors, models, versions, users, functionsList] = await Promise.all([
+                    apiRequest('/api/vendors'), apiRequest('/api/models'), apiRequest('/api/versions'), apiRequest('/api/users'), apiRequest('/api/functions')
                 ]);
-                vendorsData = vendors; modelsData = models; versionsData = versions; usersData = users;
+                vendorsData = vendors; modelsData = models; versionsData = versions; usersData = users; functionsData = functionsList;
                 renderYonetimPage();
                 attachYonetimEventListeners();
+            } else if (hash === '#/functions') {
+                navLinks.functions.classList.add('active');
+                const [treeData, matrixData] = await Promise.all([
+                    apiRequest('/api/function-support/tree'),
+                    apiRequest('/api/function-support/matrix')
+                ]);
+                functionSupportTreeData = treeData;
+                functionSupportMatrixData = matrixData;
+                activeFunctionSupportView = 'tree';
+                renderFunctionSupportPage(functionSupportTreeData, functionSupportMatrixData, activeFunctionSupportView);
+                attachFunctionSupportPageListeners();
             } else { // Dashboard veya tanımsız hash
                 navLinks.dashboard.classList.add('active');
                 const stats = await apiRequest('/api/dashboard');
@@ -83,6 +94,7 @@ async function main() {
     navLinks.dashboard.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#/dashboard'; });
     navLinks.yonetim.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#/yonetim'; });
     navLinks.bulgular.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#/bulgular'; });
+    navLinks.functions?.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#/functions'; });
     window.addEventListener('hashchange', router);
     attachAppEventListeners();
     attachSidebarToggleListeners();

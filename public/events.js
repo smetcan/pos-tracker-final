@@ -629,12 +629,270 @@ function attachBulguTableActionListeners(bulgular) {
     });
 }
 
+
+function attachFunctionModalListeners(fn = {}) {
+    document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+    const form = document.getElementById('function-form');
+    if (!form) return;
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const id = document.getElementById('function-id')?.value;
+        const nameInput = document.getElementById('function-name');
+        const descriptionInput = document.getElementById('function-description');
+        const nameValue = nameInput?.value?.trim();
+        const descriptionValue = descriptionInput?.value?.trim();
+        if (!nameValue) {
+            showErrorModal('Fonksiyon adı zorunludur.');
+            return;
+        }
+        const payload = { name: nameValue, description: descriptionValue && descriptionValue.length > 0 ? descriptionValue : null };
+        try {
+            if (id) {
+                await apiRequest('/api/functions/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            } else {
+                await apiRequest('/api/functions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            }
+            modalContainer.innerHTML = '';
+            currentActiveTab = 'functions';
+            router();
+        } catch (error) {
+            showErrorModal(error.message);
+        }
+    });
+}
+
+function attachFunctionSupportModalListeners(fn, selectedVersionIds = []) {
+    const modalRoot = document.getElementById('function-support-modal');
+    if (!modalRoot) return;
+    document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+    const vendorSelect = document.getElementById('function-support-vendor');
+    const modelsContainer = document.getElementById('function-support-models');
+    const versionsContainer = document.getElementById('function-support-versions');
+    const clearModelsBtn = document.getElementById('function-support-clear-models');
+    const saveBtn = document.getElementById('function-support-save-btn');
+    const selectedSet = new Set((selectedVersionIds || []).map(id => Number(id)));
+    const vendorModelSelections = new Map();
+
+    const parseModelIds = (version) => {
+        if (!version || !version.modelIds) return [];
+        if (Array.isArray(version.modelIds)) return version.modelIds.map(id => String(id));
+        return String(version.modelIds).split(',').map(item => item.trim()).filter(Boolean);
+    };
+
+    const getVendorModels = (vendorId) => modelsData.filter(model => String(model.vendorId) === String(vendorId));
+    const getVendorVersions = (vendorId) => versionsData.filter(version => String(version.vendorId) === String(vendorId));
+
+    const ensureVendorSelection = (vendorId) => {
+        if (!vendorModelSelections.has(vendorId)) {
+            const initialSet = new Set();
+            getVendorVersions(vendorId).forEach(version => {
+                if (selectedSet.has(Number(version.id))) {
+                    parseModelIds(version).forEach(mid => { if (mid) initialSet.add(String(mid)); });
+                }
+            });
+            if (initialSet.size === 0) {
+                getVendorModels(vendorId).forEach(model => initialSet.add(String(model.id)));
+            }
+            vendorModelSelections.set(vendorId, initialSet);
+        }
+        return vendorModelSelections.get(vendorId);
+    };
+
+    const renderVersions = (vendorId) => {
+        if (!vendorId) {
+            versionsContainer.innerHTML = '<p class="text-sm text-gray-500">Modeller seçildikten sonra listelenecek.</p>';
+            return;
+        }
+        const vendorVersions = getVendorVersions(vendorId);
+        if (vendorVersions.length === 0) {
+            versionsContainer.innerHTML = '<p class="text-sm text-gray-500">Bu vendor için versiyon bulunmuyor.</p>';
+            return;
+        }
+        const selectedModels = ensureVendorSelection(vendorId);
+        const relevantVersions = vendorVersions.filter(version => {
+            const modelIds = parseModelIds(version);
+            if (selectedModels.size === 0) return true;
+            if (modelIds.length === 0) return true;
+            return modelIds.some(id => selectedModels.has(String(id)));
+        });
+        if (relevantVersions.length === 0) {
+            versionsContainer.innerHTML = '<p class="text-sm text-gray-500">Seçilen modellere ait versiyon bulunmuyor.</p>';
+            return;
+        }
+        const versionRows = relevantVersions.map(version => {
+            const modelIds = parseModelIds(version);
+            const modelNames = modelIds
+                .map(id => modelsData.find(m => String(m.id) === String(id))?.name)
+                .filter(Boolean)
+                .join(', ');
+            const details = [modelNames || 'Model belirtilmemi?'];
+            if (version.status) details.push(version.status);
+            if (version.deliveryDate) details.push(version.deliveryDate);
+            const metaText = details.filter(Boolean).join(' - ');
+            const modelIdAttr = modelIds.join(',');
+            const checkedAttr = selectedSet.has(Number(version.id)) ? 'checked' : '';
+            return `
+                <label class="flex items-start gap-3 py-2 border-b last:border-0">
+                    <input type="checkbox" class="function-support-version-checkbox mt-1 h-4 w-4 rounded border-gray-300" value="${version.id}" data-model-ids="${modelIdAttr}" ${checkedAttr}>
+                    <div>
+                        <p class="text-sm font-medium text-gray-800">${version.versionNumber}</p>
+                        <p class="text-xs text-gray-500">${metaText}</p>
+                    </div>
+                </label>`;
+        }).join('');
+        versionsContainer.innerHTML = versionRows;
+
+        versionsContainer.querySelectorAll('.function-support-version-checkbox').forEach(input => {
+            input.addEventListener('change', () => {
+                const versionId = Number(input.value);
+                const relatedModelIds = input.dataset.modelIds ? input.dataset.modelIds.split(',').map(item => item.trim()).filter(Boolean) : [];
+                if (input.checked) {
+                    selectedSet.add(versionId);
+                    if (relatedModelIds.length > 0) {
+                        const selectedModels = ensureVendorSelection(vendorId);
+                        let shouldRerenderModels = false;
+                        relatedModelIds.forEach(mid => {
+                            if (!selectedModels.has(mid)) {
+                                selectedModels.add(mid);
+                                shouldRerenderModels = true;
+                            }
+                            const modelCheckbox = modelsContainer.querySelector(`.function-support-model-checkbox[value="${mid}"]`);
+                            if (modelCheckbox) modelCheckbox.checked = true;
+                        });
+                        if (shouldRerenderModels) {
+                            renderModels(vendorId);
+                            return;
+                        }
+                    }
+                } else {
+                    selectedSet.delete(versionId);
+                }
+            });
+        });
+    };
+
+    const renderModels = (vendorId) => {
+        if (!vendorId) {
+            modelsContainer.innerHTML = '<p class="text-sm text-gray-500">Vendor seçildikten sonra listelenecek.</p>';
+            versionsContainer.innerHTML = '<p class="text-sm text-gray-500">Modeller seçildikten sonra listelenecek.</p>';
+            return;
+        }
+        const vendorModels = getVendorModels(vendorId);
+        const selectedModels = ensureVendorSelection(vendorId);
+        if (vendorModels.length === 0) {
+            modelsContainer.innerHTML = '<p class="text-sm text-gray-500">Bu vendor için tanımlı model bulunmuyor.</p>';
+        } else {
+            modelsContainer.innerHTML = vendorModels.map(model => `
+                <label class="flex items-center gap-2 py-1">
+                    <input type="checkbox" class="function-support-model-checkbox h-4 w-4 rounded border-gray-300" value="${model.id}" ${selectedModels.has(String(model.id)) ? 'checked' : ''}>
+                    <span>${model.name}</span>
+                </label>`).join('');
+            modelsContainer.querySelectorAll('.function-support-model-checkbox').forEach(input => {
+                input.addEventListener('change', () => {
+                    if (input.checked) {
+                        selectedModels.add(input.value);
+                    } else {
+                        selectedModels.delete(input.value);
+                    }
+                    renderVersions(vendorId);
+                });
+            });
+        }
+        renderVersions(vendorId);
+    };
+
+    clearModelsBtn?.addEventListener('click', (event) => {
+        event.preventDefault();
+        const vendorId = vendorSelect?.value;
+        if (!vendorId) return;
+        vendorModelSelections.set(vendorId, new Set());
+        renderModels(vendorId);
+    });
+
+    const initialVendorId = (() => {
+        for (const version of versionsData) {
+            if (selectedSet.has(Number(version.id))) {
+                return String(version.vendorId);
+            }
+        }
+        return vendorsData.length > 0 ? String(vendorsData[0].id) : '';
+    })();
+
+    if (vendorSelect) {
+        if (initialVendorId) vendorSelect.value = initialVendorId;
+        vendorSelect.addEventListener('change', () => {
+            const vendorId = vendorSelect.value;
+            renderModels(vendorId);
+        });
+    }
+
+    if (vendorSelect?.value) {
+        renderModels(vendorSelect.value);
+    } else {
+        modelsContainer.innerHTML = '<p class="text-sm text-gray-500">Vendor seçildikten sonra listelenecek.</p>';
+        versionsContainer.innerHTML = '<p class="text-sm text-gray-500">Modeller seçildikten sonra listelenecek.</p>';
+    }
+
+    saveBtn?.addEventListener('click', async () => {
+        try {
+            await apiRequest('/api/functions/' + fn.id + '/support', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Array.from(selectedSet))
+            });
+            modalContainer.innerHTML = '';
+            currentActiveTab = 'functions';
+        } catch (error) {
+            showErrorModal(error.message);
+        }
+    });
+}
+
+function attachFunctionSupportPageListeners() {
+    document.querySelectorAll('.function-support-view-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            const requestedView = button.dataset.view;
+            if (!requestedView || requestedView === activeFunctionSupportView) return;
+            activeFunctionSupportView = requestedView;
+            renderFunctionSupportPage(functionSupportTreeData, functionSupportMatrixData, activeFunctionSupportView);
+            attachFunctionSupportPageListeners();
+        });
+    });
+}
+
 function attachYonetimEventListeners() {
     // Sekme (Tab) Değiştirme Mantığı
     document.querySelectorAll('.tab-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             currentActiveTab = e.target.dataset.tab;
             router(); // Sayfayı yeniden çizmek için ana router'ı çağır.
+        });
+    });
+
+    const toggleSort = (currentSort, key) => {
+        if (!currentSort) return { key, direction: 'asc' };
+        if (currentSort.key === key) {
+            return { key, direction: currentSort.direction === 'asc' ? 'desc' : 'asc' };
+        }
+        return { key, direction: 'asc' };
+    };
+
+    document.querySelectorAll('.sortable-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const table = header.dataset.table;
+            const sortKey = header.dataset.sortKey;
+            if (!table || !sortKey) return;
+            if (table === 'vendors') {
+                vendorSort = toggleSort(vendorSort, sortKey);
+            } else if (table === 'models') {
+                modelSort = toggleSort(modelSort, sortKey);
+            } else if (table === 'versions') {
+                versionSort = toggleSort(versionSort, sortKey);
+            } else if (table === 'functions') {
+                functionSort = toggleSort(functionSort, sortKey);
+            }
+            router();
         });
     });
 
@@ -690,6 +948,53 @@ function attachYonetimEventListeners() {
             const contacts = await apiRequest(`/api/vendors/${vendorId}/contacts`).catch(() => []);
             modalContainer.innerHTML = getVendorContactsModalHTML(vendor, contacts);
             document.querySelectorAll('.cancel-modal-btn').forEach(btn => btn.addEventListener('click', () => modalContainer.innerHTML = ''));
+        });
+    });
+
+    document.getElementById('add-function-btn')?.addEventListener('click', () => {
+        modalContainer.innerHTML = getFunctionModalHTML();
+        attachFunctionModalListeners();
+    });
+    document.querySelectorAll('.edit-function-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const functionId = button.dataset.functionId;
+            const fnToEdit = functionsData.find(fn => String(fn.id) === String(functionId));
+            if (!fnToEdit) {
+                showErrorModal('Fonksiyon bulunamad?.');
+                return;
+            }
+            modalContainer.innerHTML = getFunctionModalHTML(fnToEdit);
+            attachFunctionModalListeners(fnToEdit);
+        });
+    });
+    document.querySelectorAll('.delete-function-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const { functionId, functionName } = button.dataset;
+            modalContainer.innerHTML = getDeleteConfirmModalHTML(`"${functionName}" fonksiyonunu silmek istedi?inize emin misiniz?`);
+            document.getElementById('cancel-delete')?.addEventListener('click', () => modalContainer.innerHTML = '');
+            document.getElementById('confirm-delete')?.addEventListener('click', async () => {
+                try {
+                    await apiRequest(`/api/functions/${functionId}`, { method: 'DELETE' });
+                    modalContainer.innerHTML = '';
+                    currentActiveTab = 'functions';
+                    router();
+                } catch (error) {
+                    showErrorModal(error.message);
+                }
+            });
+        });
+    });
+    document.querySelectorAll('.manage-support-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const { functionId, functionName } = button.dataset;
+            try {
+                const selectedVersions = await apiRequest(`/api/functions/${functionId}/support`);
+                const fnData = functionsData.find(fn => String(fn.id) === String(functionId)) || { id: functionId, name: functionName };
+                modalContainer.innerHTML = getFunctionSupportModalHTML(fnData, vendorsData, modelsData, versionsData, selectedVersions);
+                attachFunctionSupportModalListeners(fnData, selectedVersions);
+            } catch (error) {
+                showErrorModal(error.message);
+            }
         });
     });
 

@@ -10,4 +10,5 @@ const navLinks = {
     dashboard: document.getElementById('nav-dashboard'),
     bulgular: document.getElementById('nav-bulgular'),
     yonetim: document.getElementById('nav-yonetim'),
+    functions: document.getElementById('nav-functions'),
 };

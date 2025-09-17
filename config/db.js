@@ -1,16 +1,45 @@
-const sqlite3 = require('sqlite3').verbose();
+﻿const sqlite3 = require('sqlite3').verbose();
 const DB_PATH = './dev.db';
 
 const db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) {
-        console.error("Veritabanına bağlanırken hata oluştu:", err.message);
+        console.error("VeritabanÄ±na baÄŸlanÄ±rken hata oluÅŸtu:", err.message);
     } else {
-        console.log("Veritabanı bağlantısı başarılı.");
+        console.log("VeritabanÄ± baÄŸlantÄ±sÄ± baÅŸarÄ±lÄ±.");
     }
 });
 
 function runMigrations() {
     db.serialize(() => {
+        db.run(`CREATE TABLE IF NOT EXISTS Functions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT
+        )`, (err) => {
+            if (err) console.error('CREATE TABLE Functions failed', err);
+            else console.log('Ensured Functions table');
+        });
+
+        db.run(`CREATE TABLE IF NOT EXISTS FunctionSupport (\n            functionId INTEGER NOT NULL,\n            versionId INTEGER NOT NULL,\n            modelIds TEXT,
+            PRIMARY KEY (functionId, versionId),
+            FOREIGN KEY (functionId) REFERENCES Functions(id) ON DELETE CASCADE,
+            FOREIGN KEY (versionId) REFERENCES AppVersion(id) ON DELETE CASCADE
+        )`, (err) => {
+            if (err) console.error('CREATE TABLE FunctionSupport failed', err);
+            else console.log('Ensured FunctionSupport table');
+        });
+
+        db.all("PRAGMA table_info('FunctionSupport')", [], (err, rows) => {
+            if (err) return console.error('PRAGMA table_info for FunctionSupport error', err);
+            const cols = rows.map(r => r.name);
+            if (!cols.includes('modelIds')) {
+                db.run("ALTER TABLE FunctionSupport ADD COLUMN modelIds TEXT", (alterErr) => {
+                    if (alterErr) console.error('ALTER TABLE FunctionSupport ADD modelIds failed', alterErr);
+                    else console.log('Added column modelIds to FunctionSupport');
+                });
+            }
+        });
+
         db.all("PRAGMA table_info('AppVersion')", [], (err, rows) => {
             if (err) return console.error('PRAGMA table_info error', err);
             const cols = rows.map(r => r.name);
@@ -75,3 +104,4 @@ function runMigrations() {
 module.exports = db;
 // run migrations at startup
 try { runMigrations(); } catch (e) { console.error('Migrations failed', e); }
+

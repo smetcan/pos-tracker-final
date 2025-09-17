@@ -11,8 +11,12 @@
 let vendorsData = [];
 let modelsData = [];
 let versionsData = [];
+let functionsData = [];
 let usersData = [];
 let bulgularData = [];
+let functionSupportTreeData = [];
+let functionSupportMatrixData = { columns: [], rows: [] };
+let activeFunctionSupportView = 'tree';
 
 // --- Arayüz Durumları ---
 // Yönetim panelindeki aktif sekmeyi takip eder.
@@ -22,6 +26,8 @@ let currentActiveTab = 'vendors';
 // Yönetim panelindeki tablolar için sıralama durumunu tutar.
 let vendorSort = { key: 'id', direction: 'asc' };
 let modelSort = { key: 'vendorName', direction: 'asc' };
+let versionSort = { key: 'versionNumber', direction: 'asc' };
+let functionSort = { key: 'name', direction: 'asc' };
 
 // --- Filtreleme Yapılandırmaları ---
 // Sayfalardaki filtrelerin anlık değerlerini tutar.

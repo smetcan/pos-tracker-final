@@ -29,8 +29,11 @@ function renderYonetimPage(options = {}) {
     if (modelFilters.isAndroidPos !== 'all') { filteredModels = filteredModels.filter(m => String(m.isAndroidPos) === String(modelFilters.isAndroidPos)); }
     if (modelFilters.isOkcPos !== 'all') { filteredModels = filteredModels.filter(m => String(m.isOkcPos) === String(modelFilters.isOkcPos)); }
     
+    const sortedVendors = sortData(vendorsData, vendorSort);
     const sortedModels = sortData(filteredModels, modelSort);
-    mainContent.innerHTML = getYonetimHTML(vendorsData, sortedModels, versionsData, usersData, currentActiveTab);
+    const sortedVersions = sortData(versionsData, versionSort);
+    const sortedFunctions = sortData(functionsData, functionSort);
+    mainContent.innerHTML = getYonetimHTML(sortedVendors, sortedModels, sortedVersions, usersData, sortedFunctions, currentActiveTab);
 
     document.getElementById('model-search-input').value = modelFilters.searchTerm;
     document.getElementById('model-vendor-filter').value = modelFilters.vendorId;
@@ -46,6 +49,10 @@ function renderYonetimPage(options = {}) {
             }
         }
      }
+}
+
+function renderFunctionSupportPage(treeData, matrixData, view = 'tree') {
+    mainContent.innerHTML = getFunctionSupportPageHTML(treeData, matrixData, view);
 }
 
 async function fetchAndRenderBulgular(options = {}) {

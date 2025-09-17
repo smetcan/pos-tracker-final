@@ -621,6 +621,81 @@ function getBulguModalHTML(vendors, models, versions, bulgu = {}, attachments = 
         </div>`;
 }
 
+    function getFunctionModalHTML(fn = {}) {
+    const isEdit = Boolean(fn && fn.id);
+    const title = isEdit ? 'Fonksiyon Düzenle' : 'Yeni Fonksiyon Ekle';
+        return `
+            <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+                <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all flex flex-col">
+                    <div class="relative flex items-center justify-center p-4 border-b rounded-t-md bg-gray-50">
+                        <h3 class="text-xl font-semibold text-gray-800">${title}</h3>
+                        <button type="button" class="cancel-modal-btn absolute top-3 right-4 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto">
+                        <form id="function-form" class="space-y-4">
+                            <input type="hidden" id="function-id" value="${fn.id || ''}">
+                            <div>
+                                <label for="function-name" class="block text-sm font-medium text-gray-700">Fonksiyon Adı</label>
+                                <input type="text" id="function-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" value="${fn.name || ''}" required>
+                            </div>
+                            <div>
+                                <label for="function-description" class="block text-sm font-medium text-gray-700">Açıklama</label>
+                                <textarea id="function-description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${fn.description || ''}</textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                        <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                        <button type="submit" form="function-form" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">${isEdit ? 'Değişiklikleri Kaydet' : 'Kaydet'}</button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function getFunctionSupportModalHTML(fn, vendors, models, versions, selectedVersionIds = []) {
+        const selectedAttr = Array.isArray(selectedVersionIds) && selectedVersionIds.length > 0 ? selectedVersionIds.join(',') : '';
+        const vendorOptions = ['<option value="">Vendor seçiniz...</option>'].concat(vendors.map(v => `<option value="${v.id}">${v.name}</option>`)).join('');
+        return `
+            <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
+                <div class="relative bg-white rounded-lg shadow-xl w-full max-w-4xl transform transition-all flex flex-col max-h-full">
+                    <div class="relative flex items-center justify-between p-4 border-b rounded-t-md bg-gray-50">
+                        <h3 class="text-xl font-semibold text-gray-800">Fonksiyon Desteği: ${fn.name || ''}</h3>
+                        <button type="button" class="cancel-modal-btn text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 inline-flex items-center">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto">
+                        <div id="function-support-modal" data-function-id="${fn.id}" data-selected-versions="${selectedAttr}">
+                            <p class="text-sm text-gray-600">Seçtiğiniz vendor ve modellere göre bu fonksiyonun desteklediği versiyonları işaretleyebilirsiniz.</p>
+                            <div class="mt-4 space-y-5">
+                                <div>
+                                    <label for="function-support-vendor" class="block text-sm font-medium text-gray-700">Vendor</label>
+                                    <select id="function-support-vendor" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${vendorOptions}</select>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-sm font-medium text-gray-700">Modeller</label>
+                                        <button type="button" id="function-support-clear-models" class="text-xs text-blue-600 hover:underline">Seçimleri temizle</button>
+                                    </div>
+                                    <div id="function-support-models" class="mt-2 border rounded-md p-3 max-h-40 overflow-y-auto bg-gray-50 text-sm text-gray-600">Vendor seçildikten sonra listelenecek.</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Versiyonlar</label>
+                                    <div id="function-support-versions" class="border rounded-md p-3 max-h-60 overflow-y-auto bg-gray-50 text-sm text-gray-600">Modeller seçildikten sonra listelenecek.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end p-4 border-t rounded-b-md bg-gray-50 gap-2">
+                        <button type="button" class="cancel-modal-btn px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium">İptal</button>
+                        <button type="button" id="function-support-save-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">Kaydet</button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
     function getDeleteConfirmModalHTML(message, subMessage = '') {
     return `
         <div class="fixed inset-0 bg-gray-600 bg-opacity-75 h-full w-full flex items-center justify-center z-50 p-4">
