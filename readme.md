@@ -57,7 +57,7 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
 **Adımlar**
 
 1. **Projeyi Klonlayın veya İndirin:**
-2. git clone \[<https://github.com/kullanici-adiniz/pos-tracker-final.git\>](<https://github.com/smetcan/pos-tracker-final.git>)
+2. git clone https://github.com/smetcan/pos-tracker-final.git
 3. cd pos-tracker-final
 4. **Gerekli Paketleri Yükleyin:** Proje bağımlılıklarını package.json dosyasından yüklemek için aşağıdaki komutu çalıştırın:
 5. npm install
