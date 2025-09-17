@@ -1,253 +1,155 @@
-# POS Takip Uygulaması (pos-tracker-simple)
+**POS Bulgu ve Versiyon Takip Sistemi**
 
-Basit, tek-dosyadan oluşan bir POS takip uygulaması. Amaç: üretici firmaların (vendor) modelleri, bu modellere ait yazılım versiyonları ve bu versiyonlara ilişkin bulunan hatalar/taleplerin (bulgular) merkezi olarak yönetilmesi.
+Bu proje, POS (Point of Sale) terminali üreten firmaların (Vendor), bu firmalara ait cihaz modellerinin, bu modellere ait yazılım versiyonlarının ve bu versiyonlarla ilgili tespit edilen hataların veya geliştirme taleplerinin (Bulgular) merkezi olarak takip edilmesini sağlayan bir web uygulamasıdır.
 
-Bu repository küçük, bağımsız ve kolay anlaşılır olacak şekilde tasarlanmıştır: bir Express sunucusu (`server.js`) + statik SPA (`public/index.html`, `public/script.js`) ve bir SQLite veritabanı dosyası (`dev.db`).
+Uygulama, modern ve reaktif bir arayüz ile kullanıcı dostu bir deneyim sunarken, arka planda güçlü ve modüler bir yapıya sahiptir.
 
-## Hızlı başlangıç
+**🚀 Temel Özellikler**
 
-1. Node.js kurulu olmalı.
-2. Bağımlılıkları yükleyin:
+- **Ana Sayfa (Dashboard):** Sistemin genel durumunu özetleyen interaktif grafikler ve istatistikler. Toplam, açık, test edilecek ve kapalı bulgu sayıları ile son eklenen kayıtlar gibi kritik bilgilere hızlı erişim sağlar.
+- **Bulgu Takibi:** Tüm hata ve talep kayıtlarının listelendiği, detaylı arama ve filtreleme seçenekleri sunan ana modül.
+- **Yönetim Paneli:**
+  - **Vendor Yönetimi:** Sisteme yeni üretici firma ekleme, düzenleme ve silme işlemleri.
+  - **Model Yönetimi:** Her bir vendor'a ait POS cihazı modellerini tanımlama ve yönetme.
+  - **Versiyon Yönetimi:** Modellere ait yazılım versiyonlarını ve bu versiyonların detaylarını (teslim tarihi, prod onayı vb.) yönetme.
+  - **Kullanıcı Yönetimi:** Sisteme yeni kullanıcı ekleme, şifre sıfırlama ve silme.
+  - **Fonksiyon Yönetimi:** POS cihazlarının desteklediği "DCC", "Taksit" gibi fonksiyonel yetenekleri tanımlama ve yönetme.
+- **Fonksiyon Desteği Görselleştirme:**
+  - **Hiyerarşi Görünümü:** Fonksiyonların hangi vendor, model ve versiyon tarafından desteklendiğini ağaç yapısında gösterir.
+  - **Matris Görünümü:** Tüm fonksiyonların, tüm versiyonlarla olan destek durumunu bir tablo üzerinde özetler.
+- **Gelişmiş Yetenekler:**
+  - **Kimlik Doğrulama:** Güvenli kullanıcı girişi ve oturum yönetimi.
+  - **Detaylı Kayıt Geçmişi:** Bir bulgu üzerinde yapılan her değişikliğin (durum değişikliği, atama vb.) kaydının tutulması.
+  - **Dosya Ekleme:** Bulgu kayıtlarına ekran görüntüsü, log dosyası gibi dokümanlar ekleyebilme.
+  - **Veri Aktarımı:** Bulguları CSV formatında dışa aktarma ve CSV'den içeri aktarma.
 
-```powershell
-npm install
-```
+**🛠️ Teknik Yapı ve Mimarisi**
 
-3. Sunucuyu başlatın:
+Proje, modern web teknolojileri kullanılarak Node.js tabanlı bir **REST API** backend'i ve bağımlılıkları en aza indirilmiş bir **Single Page Application (SPA)** frontend'i olarak tasarlanmıştır.
 
-```powershell
-npm start
-```
+**Backend Mimarisi**
 
-4. Tarayıcıda açın: http://localhost:3000
+- **Çatı (Framework):** Express.js
+- **Veritabanı:** SQLite 3
+- **Asenkron Yönetimi:** async/await ve Promise'ler
+- **Modüler Yönlendirme (Routing):** API endpoint'leri, sorumluluklarına göre (auth, vendors, bulgular vb.) routes klasörü altında modüler dosyalara ayrılmıştır.
+- **Kimlik Doğrulama:** express-session ile oturum tabanlı kullanıcı yönetimi ve bcrypt ile güvenli şifre saklama.
+- **Dosya Yükleme:** multer kütüphanesi ile dosya ekleme işlemleri yönetilir.
 
-NOT: `dev.db` repo içinde yer alabilir. Eğer yoksa veya sıfırdan oluşturacaksanız README altındaki "Veritabanı şeması" bölümündeki CREATE TABLE komutlarını kullanın.
+**Frontend Mimarisi**
 
-## Mimari - Kısa
+- **Yapı:** Vanilla JavaScript (ES6 Modules) ile oluşturulmuş, build işlemi gerektirmeyen bir Single Page Application (SPA).
+- **Tasarım ve Arayüz:** Tailwind CSS (CDN üzerinden) ile modern ve duyarlı bir tasarım.
+- **Grafikler:** Chart.js kütüphanesi ile dinamik ve interaktif grafikler.
+- **İstemci Taraflı Yönlendirme (Routing):** Hash (#) tabanlı yönlendirme ile sayfa yenilenmeden içerik değiştirilir.
+- **Kod Organizasyonu:** Frontend kodu public klasörü altında api.js, ui/, events.js gibi sorumluluklarına göre modüler dosyalara ayrılmıştır.
 
-- Backend: `server.js` (Express + sqlite3). Tüm API'ler `/api/*` altında.
-- Frontend: `public/index.html` + `public/script.js` (Vanilla JS, Tailwind via CDN). Tek dosyalık SPA, hiçbir bundling/build adımı yok.
-- Veri: tek SQLite dosyası `dev.db`.
 
-## Önemli dosyalar
+**📦 Kurulum ve Başlatma**
 
-- `server.js` — API mantığı, SQL sorguları, validasyon, transaction kullanımı.
-- `public/script.js` — UI render, form handling, `apiRequest()` wrapper, modal logic.
-- `public/index.html` — SPA shell.
-- `dev.db` — (checked-in) SQLite veritabanı; schema + test verileri.
-- `package.json` — bağımlılıklar ve `npm start` script'i.
+Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin.
 
-## API - Hızlı referans ve örnekler
+**Gereksinimler**
 
-Frontend `public/script.js` içindeki `apiRequest` wrapper tüm istekleri JSON olarak gönderir. Aşağıda birkaç örnek gösterilmiştir.
+- [Node.js](https://nodejs.org/) (v18 veya üstü tavsiye edilir)
+- npm (Node.js ile birlikte gelir)
 
-- GET tüm vendor'lar
+**Adımlar**
 
-```bash
-curl http://localhost:3000/api/vendors
-```
+1. **Projeyi Klonlayın veya İndirin:**
+2. git clone \[<https://github.com/kullanici-adiniz/pos-tracker-final.git\>](<https://github.com/smetcan/pos-tracker-final.git>)
+3. cd pos-tracker-final
+4. **Gerekli Paketleri Yükleyin:** Proje bağımlılıklarını package.json dosyasından yüklemek için aşağıdaki komutu çalıştırın:
+5. npm install
+6. **Veritabanını Hazırlayın:** Proje, içerisinde örnek veriler barındıran bir dev.db SQLite veritabanı dosyası ile birlikte gelir. Eğer bu dosya yoksa veya sıfırdan oluşturmak isterseniz, veritabanı şemasını config/db.js dosyasındaki CREATE TABLE sorgularını kullanarak oluşturabilirsiniz.
+7. **Uygulamayı Başlatın:** Aşağıdaki komut ile sunucuyu başlatın:
+8. npm start
+9. **Uygulamaya Erişin:** Sunucu başarıyla başladığında, terminalde Sunucu <http://localhost:3000> adresinde çalışıyor mesajını göreceksiniz. Tarayıcınızdan bu adrese giderek uygulamayı kullanmaya başlayabilirsiniz.
+    - **Varsayılan Giriş Bilgileri:**
+        - **Kullanıcı Adı:** smetcan
+        - Şifreyi veritabanından veya geliştiriciden temin ediniz.
 
-- POST yeni vendor
 
-```bash
-curl -X POST http://localhost:3000/api/vendors -H "Content-Type: application/json" -d '{"name":"Firma A","makeCode":"FA"}'
-```
+**Veritabanı Şeması**
 
-- POST yeni bulgu (örnek JSON)
+Uygulamanın veri modeli, ilişkisel bir yapıya sahip olup SQLite veritabanında saklanır. Ana tablolar ve ilişkileri aşağıda özetlenmiştir.
 
-```bash
-curl -X POST http://localhost:3000/api/bulgular \
-    -H "Content-Type: application/json" \
-    -d '{
-        "baslik":"Ekran çöküyor",
-        "modelIds":[1,2],
-        "bulguTipi":"Program Hatası",
-        "etkiSeviyesi":"Yüksek",
-        "tespitTarihi":"2025-09-10",
-        "detayliAciklama":"Uygulama başlatıldığında X hatası alınıyor",
-        "girenKullanici":"ali"
-    }'
-```
+| **Tablo Adı** | **Açıklama** |
+| --- | --- |
+| **Vendor** | Üretici firmaların ana tablosu. |
+| **Model** | Her bir vendor'a ait POS cihazı modellerinin tutulduğu tablo. |
+| **AppVersion** | Yazılım versiyonlarının ve bu versiyonlarla ilişkili modellerin kaydı. |
+| **VersionModel** | AppVersion ve Model arasında çoktan-çoğa ilişki kurar. |
+| **Bulgu** | Hata ve taleplerin detaylarının tutulduğu ana tablo. |
+| **BulguModel** | Bir Bulgu kaydının hangi Model'leri etkilediğini belirten çoktan-çoğa ilişki tablosu. |
+| **Functions** | "DCC", "Taksit" gibi POS fonksiyonlarının tanımlandığı tablo. |
+| **FunctionSupport** | Bir fonksiyonun hangi versiyon tarafından desteklendiğini belirtir. |
+| **users** | Uygulama kullanıcılarının ve şifrelerinin tutulduğu tablo. |
+| **history** | Bir Bulgu üzerinde yapılan tüm değişikliklerin geçmiş kaydı. |
+| **attachments** | Bulgu kayıtlarına eklenen dosyaların bilgilerini tutar. |
+| **VendorContact** | Vendor'lara ait iletişim kişilerini tutar. |
 
-Önemli: formlar frontend'de FormData -> JSON dönüşümü ile `modelIds` gibi çoklu seçimleri dizi halinde gönderir; server bunu bekler.
 
-### Hata durumları ve HTTP kodları
+**🚀 API Endpoint'leri**
 
-- 400: Eksik zorunlu alanlar (ö. örn. modelIds boş)
-- 409: UNIQUE veya foreign key ihlali (ör. vendor adı/slug tekrarları veya silme sırasında bağlı kayıtlar)
-- 500: Sunucu/DB hataları
+Uygulamanın frontend'i, backend ile /api ön eki üzerinden RESTful prensiplerine uygun olarak haberleşir. Tüm endpoint'ler isAuthenticated middleware'i ile korunmaktadır.
 
-## Veritaban� �emas�
-
-POS takip verileri alt� ana tablonun etraf�nda toplan�r. Vendor ve AppVersion tablolar� tedarik�i taraf�n�, Model tablosu donan�m cihazlar�n�, Bulgu tablosu ise bu cihazlardaki yaz�l�msal sorun ve talepleri temsil eder. VersionModel ve BulguModel yard�mc� tablolar� ili�kileri �oktan �o�a derinle�tirir.
-
-```
-Tablo          Ama�                                              Kritik Alanlar
--------------- ------------------------------------------------- ----------------------------------
-Vendor         �retici firma kay�tlar�                           name, slug (benzersiz)
-Model          Vendor tabanl� cihaz/modeller                     vendorId, isTechpos/isAndroidPos/isOkcPos bayraklar�
-AppVersion     Vendor versiyon ya�am d�ng�s�                     versionNumber, status, prodOnayDate
-VersionModel   Versiyon-model �oktan �o�a e�lemesi               versionId + modelId (PK)
-Bulgu          Bulgular, hata ve talepler                        baslik, status, cozumVersiyonId (opsiyonel)
-BulguModel     Bulgu-model �oktan �o�a e�lemesi                  bulguId + modelId (PK)
-```
-
-### Tablo detaylar�
-
-**Vendor**
-- `id`: Otomatik artan benzersiz kimlik.
-- `name`: Vendor ad�; benzersizdir ve UI katman�nda g�sterilir.
-- `makeCode`: Vendor i�in raporlama kodu.
-- `slug`: JSON dostu benzersiz k�sa ad.
-
-**Model**
-- `vendorId`: Modele ait vendor kayd�n� i�aret eder.
-- `code`: Vendor i�indeki model kodu (opsiyonel).
-- `isTechpos`, `isAndroidPos`, `isOkcPos`: Frontend filtreleri i�in kullan�lan boolean bayraklar, SQLite i�inde 0/1 olarak saklan�r.
-
-**AppVersion**
-- `vendorId`: Versiyonun hangi vendor ile ili�kili oldu�unu g�sterir.
-- `versionNumber`: Versiyon etiketi (�rnek de�er: v2.3.1).
-- `deliveryDate`, `prodOnayDate`: Teslim ve �retim onay� tarihleri gibi s�re� metrikleri.
-- `status`: Versiyonun i� ak���ndaki durumu.
-
-**VersionModel**
-- `versionId` ve `modelId`: Ayn� versiyon birden fazla modele ba�lanabildi�i i�in �oktan �o�a k�pr� olu�turur.
-
-**Bulgu**
-- `baslik`, `detayliAciklama`: Bulgunun k�sa ba�l��� ve opsiyonel a��klama metni.
-- `bulguTipi`, `etkiSeviyesi`: S�n�fland�rma alanlar�; frontend se�im kutular�n� besler.
-- `girenKullanici`: Kayd� olu�turan kullan�c� ad�.
-- `vendorTrackerNo`: Vendor taraf�ndan verilen referans numaras�.
-- `cozumVersiyonId`: Bulgunun hangi versiyon ile kapat�ld���n� g�steren opsiyonel foreign key.
-- `status`: Varsay�lan de�er `A��k`; s�re�te Kapal� gibi farkl� durumlara g�ncellenir.
-- `cozumOnaylayanKullanici`, `cozumOnayTarihi`: ��z�m onay s�reci bilgileri.
-
-**BulguModel**
-- Bir bulgunun etkilendi�i modelleri tutan �oktan �o�a k�pr� tablosu.
-
-### �li�ki diyagram� (metin)
-
-```
-Vendor (1) -> Model (n)
-Vendor (1) -> AppVersion (n)
-AppVersion (n) <-> Model (n)    via VersionModel
-Bulgu (n) <-> Model (n)         via BulguModel
-Bulgu (n) -> AppVersion (1)     cozumVersiyonId (opsiyonel)
-```
-
-### Veri b�t�nl��� ve indeksler
-
-- `Vendor.name` ve `Vendor.slug` UNIQUE k�s�tlar� �ak��malar� engeller.
-- `Model.vendorId`, `AppVersion.vendorId`, `VersionModel.versionId`/`modelId` ve `BulguModel.bulguId`/`modelId` foreign key ile korunur; `server.js` taraf�nda transaction kullan�m� ili�kili kay�tlar�n tutarl� kalmas�n� sa�lar.
-- �oktan �o�a tablolarda birle�ik PRIMARY KEY, ayn� kombinasyonlar�n ikinci kez eklenmesini engeller.
-- Boolean nitelikler (`isTechpos` vb.) integer olarak tutulur; 0 de�eri false, 1 de�eri true anlam�na gelir.
-- Performans i�in `Model.vendorId`, `VersionModel.versionId` ve `BulguModel.bulguId` �zerinde indeksler �nerilir; `dev.db` �rnek veritaban�nda bu indeksler haz�r durumdad�r.
-
-### CREATE TABLE referans�
-
-A�a��daki SQL komutlar� bo� bir veritaban� dosyas�n� olu�turmak i�in kullan�labilir.
-
-```sql
-CREATE TABLE Vendor (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    makeCode TEXT,
-    slug TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE Model (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    code TEXT,
-    vendorId INTEGER NOT NULL,
-    isTechpos INTEGER DEFAULT 0,
-    isAndroidPos INTEGER DEFAULT 0,
-    isOkcPos INTEGER DEFAULT 0,
-    FOREIGN KEY(vendorId) REFERENCES Vendor(id)
-);
-
-CREATE TABLE AppVersion (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    versionNumber TEXT NOT NULL,
-    vendorId INTEGER NOT NULL,
-    deliveryDate TEXT,
-    status TEXT,
-    prodOnayDate TEXT,
-    FOREIGN KEY(vendorId) REFERENCES Vendor(id)
-);
-
-CREATE TABLE VersionModel (
-    versionId INTEGER NOT NULL,
-    modelId INTEGER NOT NULL,
-    PRIMARY KEY(versionId, modelId),
-    FOREIGN KEY(versionId) REFERENCES AppVersion(id),
-    FOREIGN KEY(modelId) REFERENCES Model(id)
-);
-
-CREATE TABLE Bulgu (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    baslik TEXT NOT NULL,
-    bulguTipi TEXT,
-    etkiSeviyesi TEXT,
-    tespitTarihi TEXT,
-    detayliAciklama TEXT,
-    girenKullanici TEXT,
-    vendorTrackerNo TEXT,
-    cozumVersiyonId INTEGER,
-    status TEXT DEFAULT 'A��k',
-    cozumOnaylayanKullanici TEXT,
-    cozumOnayTarihi TEXT,
-    FOREIGN KEY(cozumVersiyonId) REFERENCES AppVersion(id)
-);
-
-CREATE TABLE BulguModel (
-    bulguId INTEGER NOT NULL,
-    modelId INTEGER NOT NULL,
-    PRIMARY KEY(bulguId, modelId),
-    FOREIGN KEY(bulguId) REFERENCES Bulgu(id),
-    FOREIGN KEY(modelId) REFERENCES Model(id)
-);
-```
-
-### Ek notlar
-
-- Sunucu taraf�nda baz� GET sorgular� `GROUP_CONCAT` ile ili�kili modelleri virg�lle ay�rarak d�ner; frontend bu format� hem liste g�stermede hem de form doldurmada kullan�r.
-
-## Geliştirme notları & proje özgü gotchalar
+| **Method** | **Endpoint** | **Açıklama** |
+| --- | --- | --- |
+| POST | /api/login | Kullanıcı girişi yapar ve oturum başlatır. |
+| POST | /api/logout | Mevcut kullanıcı oturumunu sonlandırır. |
+| GET | /api/session-check | Aktif bir oturum olup olmadığını kontrol eder. |
+| GET | /api/dashboard | Ana sayfa istatistiklerini getirir. |
+| GET | /api/bulgular | Bulguları filtreleme ve sayfalama seçenekleriyle listeler. |
+| POST | /api/bulgular | Yeni bir bulgu kaydı oluşturur. |
+| PUT | /api/bulgular/:id | Belirtilen ID'ye sahip bulguyu günceller. |
+| DELETE | /api/bulgular/:id | Belirtilen ID'ye sahip bulguyu siler. |
+| GET | /api/bulgular/export | Filtrelenmiş bulguları CSV olarak dışa aktarır. |
+| GET | /api/vendors | Tüm vendor'ları listeler. |
+| POST | /api/vendors | Yeni bir vendor ekler. |
+| ... | ... | (Diğer tüm models, versions, users, functions endpoint'leri) |
 
-- `dev.db` dosyası repository içinde yer alıyorsa, Windows'ta açık dosya kilitleri nedeniyle `git merge` veya `git checkout` sırasında "unable to unlink old 'dev.db'" gibi hatalar alabilirsiniz. Çözüm adımları:
 
-    1. Çalışan sunucuyu durdurun (`npm stop` / Ctrl+C) veya `node server.js` çalışıyorsa kapatın.
-    2. Gerekirse `dev.db`'yi yedekleyin:
+**📁 Proje Dosya Yapısı**
 
-```powershell
-Copy-Item .\dev.db .\dev.db.bak -Force
-```
+pos-tracker/
 
-    3. Merge / checkout işlemini tekrar deneyin.
+├── config/
 
-- Çok adımlı güncellemeler server tarafında SQLite transaction (BEGIN/COMMIT/ROLLBACK) ile korunmuştur. Bu akışları bozmamaya dikkat edin (ör. versiyon güncelleme ve bulgu güncelleme).
+│ └── db.js # Veritabanı bağlantısı ve migrasyonlar
 
-- Static dosyalar cache'lenmesin diye `server.js` statik middleware'de cache-control ve etag/lastModified devre dışı bırakılmış. Tarayıcı caching ile ilgili hata ayıklarken bunu unutmayın.
+├── middleware/
 
-## DB debugging & inceleme
+│ └── auth.js # Oturum kontrolü middleware'i
 
-- Terminalde sqlite3 yüklü ise:
+├── public/
 
-```powershell
-sqlite3 dev.db
-.tables
-.schema Vendor
-SELECT * FROM Vendor LIMIT 10;
-```
+│ ├── ui/ # Arayüz bileşenlerini (modals, pages, tables) oluşturan JS dosyaları
 
-## Katkıda bulunma
+│ ├── api.js # Backend'e istek atmak için kullanılan yardımcı fonksiyon
 
-- Küçük bir proje; yeni bir özellik eklemeden veya schema değişikliği yapmadan önce lütfen `server.js` ve `public/script.js`'deki ilgili akışı kontrol edin.
-- `dev.db` binary olduğu için PR'lerde dikkatli olun. Eğer schema veya başlangıç verisi değiştirilecekse, `dev.db` yerine migration SQL veya `dev.db.bak` önerisi ekleyin.
+│ ├── events.js # DOM olaylarını (click, submit vb.) yöneten kodlar
 
-## Sık karşılaşılan sorunlar
+│ ├── script.js # Ana uygulama mantığı ve SPA router'ı
 
-- Sunucu başlatılamıyor / `dev.db` kilitleniyor: yukarıdaki yedekleme/adımları takip edin.
-- API 400 hatası: eksik zorunlu alan veya yanlış payload formatı (JSON içinde array bekleniyor vs.). Frontend `Content-Type: application/json` ile gönderiyor.
+│ └── ... # Diğer statik dosyalar (index.html, state.js, utils.js)
+
+├── routes/
+
+│ ├── auth.js # Kimlik doğrulama ile ilgili yollar
+
+│ ├── bulgular.js # Bulgular ile ilgili tüm API yolları
+
+│ └── ... # Diğer modüller için API yolları (vendors.js, models.js vb.)
+
+├── uploads/
+
+│ └── ... # Kullanıcıların yüklediği dosyaların saklandığı klasör
+
+├── .gitignore
+
+├── package.json
+
+├── readme.md
+
+└── server.js # Ana Express sunucu dosyası
