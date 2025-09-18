@@ -6,6 +6,10 @@ let router;
 document.addEventListener('DOMContentLoaded', main);
 
 async function main() {
+    if (window.lucide?.createIcons) {
+        window.lucide.createIcons();
+    }
+
     // 1. OTURUM KONTROLÜ
     try {
         const session = await apiRequest('/api/session-check');
