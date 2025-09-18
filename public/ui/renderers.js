@@ -3,9 +3,9 @@
 function renderDashboardCharts(stats) {
     const { statusDistribution, bulguByVendor } = stats;
     const pieCtx = document.getElementById('statusPieChart')?.getContext('2d');
-    if (pieCtx) { new Chart(pieCtx, { type: 'pie', data: { labels: statusDistribution.map(item => item.status), datasets: [{ data: statusDistribution.map(item => item.count), backgroundColor: ['#EF4444', '#3B82F6', '#6B7280', '#F59E0B'] }] }, options: { responsive: true, maintainAspectRatio: false } }); }
+    if (pieCtx) { new Chart(pieCtx, { type: 'pie', data: { labels: statusDistribution.map(item => item.status), datasets: [{ data: statusDistribution.map(item => item.count), backgroundColor: ['#EF4444', '#3B82F6', '#6B7280', '#F59E0B'] }] }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 16 } } } }); }
     const barCtx = document.getElementById('vendorBarChart')?.getContext('2d');
-    if (barCtx) { new Chart(barCtx, { type: 'bar', data: { labels: bulguByVendor.map(item => item.name), datasets: [{ label: 'Bulgu Sayısı', data: bulguByVendor.map(item => item.count), backgroundColor: 'rgba(59, 130, 246, 0.5)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } } }); }
+    if (barCtx) { new Chart(barCtx, { type: 'bar', data: { labels: bulguByVendor.map(item => item.name), datasets: [{ label: 'Bulgu Sayısı', data: bulguByVendor.map(item => item.count), backgroundColor: 'rgba(59, 130, 246, 0.5)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } } }); }
 }
 
 function renderBulgularPage(bulgular, pagination, options = {}) {

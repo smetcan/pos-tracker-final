@@ -71,7 +71,7 @@
             <div class="bg-white rounded-lg shadow">
                 <div class="p-6">
                     <div class="rounded-md border overflow-x-auto">
-                        <table class="w-full text-sm min-w-[1100px]">
+                        <table class="zebra-table w-full text-sm min-w-[1100px]">
                             <thead>
                                 <tr class="border-b bg-gray-50">
                                     <th class="p-3 text-left">ID</th>

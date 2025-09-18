@@ -101,7 +101,7 @@
             return `<tr class="border-b last:border-0">${infoCells}${supportCells}</tr>`;
         }).join('');
         return `<div class="overflow-x-auto">
-            <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+            <table class="zebra-table min-w-full text-sm border rounded-lg overflow-hidden">
                 <thead class="bg-gray-50">
                     <tr class="border-b">
                         <th class="p-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
@@ -178,13 +178,13 @@
             <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white p-6 rounded-lg shadow-md flex flex-col h-96">
                     <h3 class="font-semibold text-lg mb-4 flex-shrink-0">Bulgu Durum Dağılımı</h3>
-                    <div class="relative flex-grow">
+                    <div class="relative flex-grow chart-container chart-container--pie">
                         <canvas id="statusPieChart"></canvas>
                     </div>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-md flex flex-col h-96">
                     <h3 class="font-semibold text-lg mb-4 flex-shrink-0">Vendor Bazında Bulgu Sayısı</h3>
-                    <div class="relative flex-grow">
+                    <div class="relative flex-grow chart-container">
                         <canvas id="vendorBarChart"></canvas>
                     </div>
                 </div>
@@ -401,7 +401,7 @@
             <div class="p-6">
                 <div id="vendors-tab" class="tab-content ${activeTab === 'vendors' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Vendor Tanımları</h2><button id="add-vendor-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Vendor Ekle</button></div>
-                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                    <div class="rounded-md border"><table class="zebra-table w-full text-sm"><thead><tr class="border-b">
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="vendors" data-sort-key="name">Vendor Adı ${getSortIcon(vendorSort, 'name')}</th>
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="vendors" data-sort-key="makeCode">Vendor Kodu ${getSortIcon(vendorSort, 'makeCode')}</th>
                         <th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${vendorsTableRows}</tbody></table></div>
@@ -409,7 +409,7 @@
                 <div id="models-tab" class="tab-content ${activeTab === 'models' ? 'active' : ''}">
                      <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Model Tanımları</h2><button id="add-model-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Model Ekle</button></div>
                      ${modelFilterBarHTML}
-                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                    <div class="rounded-md border"><table class="zebra-table w-full text-sm"><thead><tr class="border-b">
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="models" data-sort-key="name">Model Adı ${getSortIcon(modelSort, 'name')}</th>
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="models" data-sort-key="code">Model Kodu ${getSortIcon(modelSort, 'code')}</th>
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="models" data-sort-key="vendorName">Vendor ${getSortIcon(modelSort, 'vendorName')}</th>
@@ -420,7 +420,7 @@
                 </div>
                 <div id="versions-tab" class="tab-content ${activeTab === 'versions' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Versiyon Tanımları</h2><button id="add-version-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Versiyon Ekle</button></div>
-                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                    <div class="rounded-md border"><table class="zebra-table w-full text-sm"><thead><tr class="border-b">
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="versionNumber">Versiyon No ${getSortIcon(versionSort, 'versionNumber')}</th>
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="vendorName">Vendor ${getSortIcon(versionSort, 'vendorName')}</th>
                         <th class="p-3 text-left sortable-header cursor-pointer select-none" data-table="versions" data-sort-key="deliveryDate">Teslim Tarihi ${getSortIcon(versionSort, 'deliveryDate')}</th>
@@ -431,12 +431,12 @@
                 </div>
                 <div id="functions-tab" class="tab-content ${activeTab === 'functions' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Fonksiyon Tanımları</h2><button id="add-function-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Fonksiyon Ekle</button></div>
-                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b"><th class="p-3 text-left">Fonksiyon Adı</th><th class="p-3 text-left">Açıklama</th><th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${functionsTableRows}</tbody></table></div>
+                    <div class="rounded-md border"><table class="zebra-table w-full text-sm"><thead><tr class="border-b"><th class="p-3 text-left">Fonksiyon Adı</th><th class="p-3 text-left">Açıklama</th><th class="p-3 text-right">İşlemler</th></tr></thead><tbody>${functionsTableRows}</tbody></table></div>
                 </div>
 
                 <div id="users-tab" class="tab-content ${activeTab === 'users' ? 'active' : ''}">
                     <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold">Kullanıcı Yönetimi</h2><button id="add-user-btn" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md">Yeni Kullanıcı Ekle</button></div>
-                    <div class="rounded-md border"><table class="w-full text-sm"><thead><tr class="border-b">
+                    <div class="rounded-md border"><table class="zebra-table w-full text-sm"><thead><tr class="border-b">
                         <th class="p-3 text-left">Kullanıcı Adı</th>
                         <th class="p-3 text-left">İsim Soyisim</th>
                         <th class="p-3 text-left">E-posta</th>
