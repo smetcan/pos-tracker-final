@@ -1415,44 +1415,13 @@ function attachAppEventListeners() {
 
 function attachSidebarToggleListeners() {
     const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebar-toggle-btn');
-    const iconOpen = document.getElementById('toggle-icon-open');
-    const iconClose = document.getElementById('toggle-icon-close');
 
-    // Eğer gerekli elementler bulunamazsa, hatayı önlemek için fonksiyonu durdur.
-    if (!sidebar || !toggleBtn || !iconOpen || !iconClose) {
-        console.error('Sidebar toggle elementleri bulunamadı.');
-        return; 
+    if (!sidebar) {
+        console.error('Sidebar elementi bulunamadı.');
+        return;
     }
 
-    const setSidebarState = (collapsed) => {
-        localStorage.setItem('sidebarCollapsed', collapsed);
-        if (collapsed) {
-            sidebar.classList.add('-translate-x-full'); // Kenar çubuğunu sola kaydır
-            toggleBtn.classList.add('translate-x-4'); // Butonu sağa kaydır
-            toggleBtn.classList.remove('translate-x-64');
-            iconOpen.classList.remove('hidden');
-            iconClose.classList.add('hidden');
-        } else {
-            sidebar.classList.remove('-translate-x-full'); // Kenar çubuğunu görünür yap
-            toggleBtn.classList.add('translate-x-64'); // Butonu kenar çubuğunun sağına kaydır
-            toggleBtn.classList.remove('translate-x-4');
-            iconOpen.classList.add('hidden');
-            iconClose.classList.remove('hidden');
-        }
-    };
-
-    toggleBtn.addEventListener('click', () => {
-        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        setSidebarState(!isCollapsed);
-    });
-
-    // Sayfa ilk yüklendiğinde, kaydedilmiş durumu animasyonsuz uygula
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        sidebar.classList.add('duration-0'); // Animasyonu geçici olarak kapat
-        setSidebarState(true);
-        setTimeout(() => sidebar.classList.remove('duration-0'), 50); // Animasyonu geri aç
-    } else {
-        setSidebarState(false);
-    }
+    // Collapse özelliği tamamen kaldırıldı; sidebar her zaman açık kalsın.
+    sidebar.classList.remove('-translate-x-full');
+    localStorage.removeItem('sidebarCollapsed');
 }
