@@ -1295,6 +1295,26 @@ function attachBulgularEventListeners(bulgular) {
     }
 
     const applyFilterAndResetPage = () => fetchAndRenderBulgular({ page: 1 });
+    const tipSelect = document.getElementById('bulgu-tip-filter');
+    const tipToggleButtons = Array.from(document.querySelectorAll('.bulgu-type-toggle'));
+
+    const updateTipControls = (value) => {
+        if (tipSelect && tipSelect.value !== value) tipSelect.value = value;
+        tipToggleButtons.forEach(btn => {
+            btn.classList.toggle('type-toggle-active', btn.dataset.tip === value);
+        });
+    };
+
+    const setTipFilter = (value, { triggerFetch = true } = {}) => {
+        if (!value) value = 'all';
+        const normalized = value;
+        const changed = bulguFilters.tip !== normalized;
+        bulguFilters.tip = normalized;
+        updateTipControls(normalized);
+        if (triggerFetch && (changed || normalized === 'all')) {
+            applyFilterAndResetPage();
+        }
+    };
     document.getElementById('bulgu-vendor-filter')?.addEventListener('change', (e) => {
         bulguFilters.vendorId = e.target.value;
         applyFilterAndResetPage();
@@ -1303,12 +1323,28 @@ function attachBulgularEventListeners(bulgular) {
         bulguFilters.status = e.target.value;
         applyFilterAndResetPage();
     });
-    document.getElementById('bulgu-tip-filter')?.addEventListener('change', (e) => {
-        bulguFilters.tip = e.target.value;
-        applyFilterAndResetPage();
+    if (tipSelect) {
+        tipSelect.addEventListener('change', (e) => {
+            setTipFilter(e.target.value);
+        });
+    }
+    tipToggleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const { tip } = button.dataset;
+            setTipFilter(tip);
+        });
     });
+    updateTipControls(bulguFilters.tip);
     document.getElementById('clear-bulgu-filters-btn')?.addEventListener('click', () => {
-        bulguFilters = { ...bulguFilters, searchTerm: '', vendorId: 'all', status: 'all', tip: 'all' };
+        bulguFilters.searchTerm = '';
+        bulguFilters.vendorId = 'all';
+        bulguFilters.status = 'all';
+        setTipFilter('all', { triggerFetch: false });
+        if (searchInput) searchInput.value = '';
+        const vendorSelect = document.getElementById('bulgu-vendor-filter');
+        if (vendorSelect) vendorSelect.value = 'all';
+        const statusSelect = document.getElementById('bulgu-status-filter');
+        if (statusSelect) statusSelect.value = 'all';
         fetchAndRenderBulgular({ page: 1, focusOn: 'bulgu-search-input' });
     });
     

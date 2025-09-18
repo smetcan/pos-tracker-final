@@ -139,13 +139,55 @@
 
 
     function getDashboardHTML(stats) { 
-        const { totalBulgular, openBulgular, testBulgular, closedBulgular, sonBulgular, openBulguByVendor } = stats;
+        const { sonBulgular, openBulguByVendor, breakdown = {} } = stats;
+        const typeTotals = breakdown.byType || [];
+        const statusByType = breakdown.statusByType || [];
+        const knownTypes = ['Program Hatası', 'Yeni Talep'];
+        const allTypes = Array.from(new Set([...knownTypes, ...typeTotals.map(t => t.type)])).filter(Boolean);
+
+        const typeMeta = {
+            'Program Hatası': { label: 'Program Hatası', accent: 'text-red-600', badge: 'bg-red-100 text-red-700', bg: 'bg-red-50' },
+            'Yeni Talep': { label: 'Yeni Talep', accent: 'text-emerald-600', badge: 'bg-emerald-100 text-emerald-700', bg: 'bg-emerald-50' }
+        };
+
+        const resolveTypeCount = (type) => typeTotals.find(item => item.type === type)?.count || 0;
+        const resolveStatusCount = (type, status) => {
+            const match = statusByType.find(item => item.type === type && item.status === status);
+            return match ? match.count : 0;
+        };
+
         const statCards = `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-sm font-medium text-gray-500">Toplam Bulgu</h3><p class="mt-2 text-3xl font-bold">${totalBulgular}</p></div>
-                <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-sm font-medium text-gray-500">Açık Bulgular</h3><p class="mt-2 text-3xl font-bold text-red-600">${openBulgular}</p></div>
-                <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-sm font-medium text-gray-500">Test Edilecekler</h3><p class="mt-2 text-3xl font-bold text-blue-600">${testBulgular}</p></div>
-                <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-sm font-medium text-gray-500">Kapalı Bulgular</h3><p class="mt-2 text-3xl font-bold text-gray-600">${closedBulgular}</p></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                ${allTypes.map(type => {
+                    const meta = typeMeta[type] || { label: type, accent: 'text-blue-600', badge: 'bg-blue-100 text-blue-700', bg: 'bg-blue-50' };
+                    const total = resolveTypeCount(type);
+                    const open = resolveStatusCount(type, 'Açık');
+                    const test = resolveStatusCount(type, 'Test Edilecek');
+                    const closed = resolveStatusCount(type, 'Kapalı');
+                    return `
+                        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-gray-500">${meta.label}</h3>
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${meta.badge}">${meta.label}</span>
+                            </div>
+                            <p class="mt-3 text-3xl font-bold ${meta.accent}">${total}</p>
+                            <div class="mt-4 grid grid-cols-3 gap-3 text-center">
+                                <div class="p-2 rounded-md ${meta.bg} bg-opacity-40">
+                                    <p class="text-xs text-gray-500">Açık</p>
+                                    <p class="text-base font-semibold text-gray-800">${open}</p>
+                                </div>
+                                <div class="p-2 rounded-md bg-blue-50">
+                                    <p class="text-xs text-gray-500">Test</p>
+                                    <p class="text-base font-semibold text-gray-800">${test}</p>
+                                </div>
+                                <div class="p-2 rounded-md bg-slate-50">
+                                    <p class="text-xs text-gray-500">Kapalı</p>
+                                    <p class="text-base font-semibold text-gray-800">${closed}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
         const recentFindingsList = sonBulgular.map(b => `
@@ -194,6 +236,46 @@
 
     function getBulgularPageHTML(bulgular, pagination = {}) {
     const { currentPage, totalPages, totalRecords } = pagination;
+    const breakdown = bulguBreakdown || { byType: [], statusByType: [] };
+    const countsByType = breakdown.byType.reduce((acc, item) => {
+        if (!item.type) return acc;
+        acc[item.type] = item.count;
+        return acc;
+    }, {});
+    const typeMeta = {
+        'Program Hatası': { label: 'Program Hatası', chip: 'bg-red-50 text-red-700 border border-red-200', chipActive: 'bg-red-600 text-white border-red-600' },
+        'Yeni Talep': { label: 'Yeni Talep', chip: 'bg-emerald-50 text-emerald-700 border border-emerald-200', chipActive: 'bg-emerald-600 text-white border-emerald-600' }
+    };
+    const orderedTypes = ['Program Hatası', 'Yeni Talep'];
+    const allTypes = Array.from(new Set([...orderedTypes, ...Object.keys(countsByType)])).filter(Boolean);
+    const totalAcrossTypes = allTypes.reduce((sum, type) => sum + (countsByType[type] || 0), 0);
+    const activeTip = bulguFilters.tip;
+    const subtitle = activeTip === 'all'
+        ? `Program hatası ve yeni talep kayıtlarını birlikte yönetiyorsunuz. (${totalRecords || 0} kayıt)`
+        : `${(typeMeta[activeTip] || { label: activeTip }).label} filtreli sonuçlar (${totalRecords || 0} / ${(countsByType[activeTip] || 0)})`;
+    const toggleOptions = [{ value: 'all', label: 'Tümü', count: totalAcrossTypes }].concat(
+        allTypes.map(type => ({ value: type, label: (typeMeta[type] || { label: type }).label, count: countsByType[type] || 0 }))
+    );
+    const tipToggleButtons = `
+        <div class="mt-4 flex flex-wrap items-center gap-2 bulgu-type-toggle-group">
+            ${toggleOptions.map(opt => {
+                const isActive = activeTip === opt.value;
+                return `<button type="button" class="bulgu-type-toggle ${isActive ? 'type-toggle-active' : ''}" data-tip="${opt.value}">
+                    <span class="label">${opt.label}</span>
+                    <span class="count">${opt.count}</span>
+                </button>`;
+            }).join('')}
+        </div>
+    `;
+    const summaryBadges = allTypes.length > 0
+        ? allTypes.map(type => {
+            const meta = typeMeta[type] || { label: type, chip: 'bg-slate-100 text-slate-700 border border-slate-200', chipActive: 'bg-slate-600 text-white border-slate-600' };
+            const isActive = activeTip === type;
+            const count = countsByType[type] || 0;
+            const classes = isActive ? meta.chipActive : meta.chip;
+            return `<span class="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full ${classes}">${meta.label}: <span class="text-sm font-bold">${count}</span></span>`;
+        }).join('')
+        : '<span class="inline-flex items-center px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-full">Kayıt bulunmuyor</span>';
 
     const paginationHTML = totalPages > 1 ? `
         <div class="flex justify-between items-center mt-4">
@@ -210,8 +292,13 @@
     return `
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="text-3xl font-bold">Bulgu Takibi</h1>
-                <p class="text-gray-500">Tüm program hatalarını ve yeni talepleri buradan yönetebilirsiniz. (${totalRecords || 0} kayıt)</p>
+                <h1 class="text-3xl font-bold">Bulgular & Talepler</h1>
+                <p class="text-gray-500">${subtitle}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    ${summaryBadges}
+                    <span class="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full border border-gray-200 bg-gray-50 text-gray-600">Toplam: <span class="text-sm font-bold">${totalAcrossTypes}</span></span>
+                </div>
+                ${tipToggleButtons}
             </div>
             <div class="flex items-center gap-2">
                 <button id="bulgu-export-btn" class="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-md">Dışa Aktar (CSV)</button>

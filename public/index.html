@@ -51,6 +51,27 @@
         .chart-container { position: relative; height: 100%; }
         .chart-container canvas { width: 100% !important; height: 100% !important; }
         .chart-container.chart-container--pie { padding-bottom: 1.5rem; }
+        .bulgu-type-toggle-group { gap: 0.5rem; }
+        .bulgu-type-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 9999px;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            color: #374151;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .bulgu-type-toggle .count { font-weight: 700; font-size: 0.8rem; }
+        .bulgu-type-toggle:hover { background-color: #e5f6f1; border-color: #01a76d; color: #03624a; }
+        .bulgu-type-toggle.type-toggle-active {
+            background-color: #01a76d;
+            color: #ffffff;
+            border-color: #019161;
+        }
     </style>
 </head>
 <body class="h-full font-sans bg-gray-50 text-gray-800">

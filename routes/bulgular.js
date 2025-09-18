@@ -249,6 +249,7 @@ router.get('/bulgular', (req, res) => {
 
     let params = [];
     let countParams = [];
+    let breakdownParams = [];
 
     let sql = `
         SELECT b.*, v.name as vendorName, GROUP_CONCAT(DISTINCT m.name) as models,
@@ -258,19 +259,24 @@ router.get('/bulgular', (req, res) => {
         LEFT JOIN BulguModel bm ON b.id = bm.bulguId
         LEFT JOIN Model m ON bm.modelId = m.id
         LEFT JOIN AppVersion av ON b.cozumVersiyonId = av.id`;
-    
+
     let countSql = `SELECT COUNT(DISTINCT b.id) as count FROM Bulgu b `;
+    let breakdownWhereClauses = [];
 
     let whereClauses = [];
     if (vendorId && vendorId !== 'all') {
         whereClauses.push(`b.vendorId = ?`);
         params.push(vendorId);
         countParams.push(vendorId);
+        breakdownWhereClauses.push(`b.vendorId = ?`);
+        breakdownParams.push(vendorId);
     }
     if (status && status !== 'all') {
         whereClauses.push(`b.status = ?`);
         params.push(status);
         countParams.push(status);
+        breakdownWhereClauses.push(`b.status = ?`);
+        breakdownParams.push(status);
     }
     if (tip && tip !== 'all') {
         whereClauses.push(`b.bulguTipi = ?`);
@@ -282,6 +288,8 @@ router.get('/bulgular', (req, res) => {
         const searchTermLike = `%${searchTerm}%`;
         params.push(searchTermLike, searchTermLike);
         countParams.push(searchTermLike, searchTermLike);
+        breakdownWhereClauses.push(`(b.baslik LIKE ? OR b.detayliAciklama LIKE ?)`);
+        breakdownParams.push(searchTermLike, searchTermLike);
     }
 
     if (whereClauses.length > 0) {
@@ -289,27 +297,44 @@ router.get('/bulgular', (req, res) => {
         sql += whereString;
         countSql += whereString;
     }
-    
+
+    const breakdownWhereString = breakdownWhereClauses.length > 0 ? ` WHERE ` + breakdownWhereClauses.join(' AND ') : '';
+
     sql += ` GROUP BY b.id ORDER BY b.id DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     db.all(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({ "error": `Bulgu verileri alınırken hata: ${err.message}` });
+        if (err) return res.status(500).json({ "error": `Bulgu verileri alinirken hata: ${err.message}` });
 
         db.get(countSql, countParams, (countErr, countRow) => {
-            if (countErr) return res.status(500).json({ "error": `Bulgu sayısı alınırken hata: ${countErr.message}` });
+            if (countErr) return res.status(500).json({ "error": `Bulgu sayisi alinirken hata: ${countErr.message}` });
 
             const totalRecords = countRow.count;
             const totalPages = Math.ceil(totalRecords / limit);
 
-            res.json({
-                data: rows,
-                pagination: {
-                    currentPage: Number(page),
-                    totalPages: totalPages,
-                    totalRecords: totalRecords,
-                    limit: Number(limit)
-                }
+            const typeBreakdownSql = `SELECT b.bulguTipi as type, COUNT(DISTINCT b.id) as count FROM Bulgu b${breakdownWhereString} GROUP BY b.bulguTipi`;
+            const statusBreakdownSql = `SELECT b.bulguTipi as type, b.status as status, COUNT(DISTINCT b.id) as count FROM Bulgu b${breakdownWhereString} GROUP BY b.bulguTipi, b.status`;
+
+            db.all(typeBreakdownSql, breakdownParams, (typeErr, typeRows) => {
+                if (typeErr) return res.status(500).json({ "error": `Tip dagilimi alinirken hata: ${typeErr.message}` });
+
+                db.all(statusBreakdownSql, breakdownParams, (statusErr, statusRows) => {
+                    if (statusErr) return res.status(500).json({ "error": `Durum dagilimi alinirken hata: ${statusErr.message}` });
+
+                    res.json({
+                        data: rows,
+                        pagination: {
+                            currentPage: Number(page),
+                            totalPages: totalPages,
+                            totalRecords: totalRecords,
+                            limit: Number(limit)
+                        },
+                        breakdown: {
+                            byType: typeRows,
+                            statusByType: statusRows
+                        }
+                    });
+                });
             });
         });
     });

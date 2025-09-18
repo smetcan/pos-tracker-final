@@ -14,6 +14,7 @@ let versionsData = [];
 let functionsData = [];
 let usersData = [];
 let bulgularData = [];
+let bulguBreakdown = { byType: [], statusByType: [] };
 let functionSupportTreeData = [];
 let functionSupportMatrixData = { columns: [], rows: [] };
 let activeFunctionSupportView = 'tree';
